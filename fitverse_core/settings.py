@@ -90,6 +90,11 @@ STATIC_ROOT = BASE_DIR / 'staticfiles'
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
+DATA_UPLOAD_MAX_MEMORY_SIZE = 12 * 1024 * 1024
+FILE_UPLOAD_MAX_MEMORY_SIZE = 12 * 1024 * 1024
+
+FASHN_VTON_SPACE = os.getenv('FASHN_VTON_SPACE', 'fashn-ai/fashn-vton-1.5')
+HF_TOKEN = os.getenv('HF_TOKEN', '')
 
 LOGIN_REDIRECT_URL = 'dashboard'
 LOGOUT_REDIRECT_URL = 'home'

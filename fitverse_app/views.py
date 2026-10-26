@@ -6,6 +6,7 @@ from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.models import User
 from django.db.models import Q
 from .models import Category, Design, UserMeasurement, SavedLook, Favorite, VirtualTryOn
+from .services.fashn_vton import FashnVtonError, generate_try_on
 
 def get_session_key(request):
     if not request.session.session_key:
@@ -240,14 +241,15 @@ def api_vton_tryon(request):
     if request.method != 'POST':
         return JsonResponse({'error': 'POST required'}, status=405)
 
-    try:
-        data = json.loads(request.body.decode('utf-8'))
-    except Exception:
-        data = {}
-
-    design_id = data.get('design_id')
-    model_preset = data.get('model_preset', 'male-1')
+    design_id = request.POST.get('design_id')
+    model_preset = request.POST.get('model_preset', 'male-1')
+    category = request.POST.get('category', 'one-pieces')
+    person_image = request.FILES.get('person_image') or request.POST.get('person_image_url')
+    garment_image = request.FILES.get('garment_image')
     session_key = get_session_key(request)
+
+    if not person_image:
+        return JsonResponse({'error': 'Upload a person image or select a model.'}, status=400)
 
     design = None
     if design_id:
@@ -256,21 +258,40 @@ def api_vton_tryon(request):
         except (Design.DoesNotExist, ValueError):
             pass
 
-    output_img = design.image_url if design else 'https://images.unsplash.com/photo-1617137968427-85924c800a22?auto=format&fit=crop&w=900&q=85'
+    if garment_image is None:
+        garment_image = request.POST.get('garment_image_url') or (design.image_url if design else None)
+    if not garment_image:
+        return JsonResponse({'error': 'Select a garment before generating a try-on.'}, status=400)
+
+    try:
+        result_image = generate_try_on(
+            person_image=person_image,
+            garment_image=garment_image,
+            category=category,
+            garment_photo_type=request.POST.get('garment_photo_type', 'model'),
+            num_timesteps=30,
+            guidance_scale=1.5,
+            seed=42,
+            segmentation_free=True,
+        )
+    except FashnVtonError as exc:
+        return JsonResponse({'error': str(exc)}, status=503)
 
     tryon = VirtualTryOn.objects.create(
         user=request.user if request.user.is_authenticated else None,
         session_key=session_key,
         design=design,
         model_preset=model_preset,
-        result_photo_url=output_img,
-        status='completed'
+        user_photo_url=person_image.name if hasattr(person_image, 'name') else person_image,
+        result_photo_url=result_image,
+        category=category,
+        status='completed',
     )
 
     return JsonResponse({
         'status': 'success',
         'tryon_id': tryon.id,
-        'result_image': output_img,
+        'result_image': result_image,
         'garment_title': design.title if design else 'Active Look',
     })
 

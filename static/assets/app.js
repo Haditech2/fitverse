@@ -282,6 +282,88 @@ const FASHION_CATALOG = [
 ];
 
 let activeGarment = FASHION_CATALOG[0];
+let dedicatedTryonDesign = null;
+let dedicatedPersonFile = null;
+let dedicatedGarmentFile = null;
+
+function selectTryonDesign(button){
+  dedicatedTryonDesign = {
+    id: button.dataset.designId,
+    image: button.dataset.designImage,
+    category: button.dataset.designCategory || 'one-pieces'
+  };
+  markActive(button);
+  const status = $('#dedicated-garment-status');
+  if(status) status.textContent = 'Catalog garment selected. Upload a custom garment to replace it.';
+  const preview = $('#dedicated-garment-card-preview');
+  if(preview){
+    preview.src = button.dataset.designImage;
+    preview.style.display = 'block';
+  }
+  const name = $('#dedicated-garment-name');
+  if(name) name.textContent = button.querySelector('span')?.textContent || 'Catalog garment selected';
+  toast('Garment selected for virtual try-on.');
+}
+
+function runDedicatedTryOn(){
+  const status = $('#tryon-status');
+  const preview = $('#user-photo-preview');
+  const personFile = dedicatedPersonFile || $('#dedicated-person-upload')?.files?.[0];
+  const garmentFile = dedicatedGarmentFile || $('#dedicated-garment-upload')?.files?.[0];
+  const selected = dedicatedTryonDesign || document.querySelector('.mini-design.selected');
+  const designId = selected?.id || selected?.dataset?.designId;
+  const garmentUrl = dedicatedTryonDesign?.image || selected?.dataset?.designImage;
+  const category = dedicatedTryonDesign?.category || selected?.dataset?.designCategory || 'one-pieces';
+
+  if(!personFile){
+    if(status){ status.textContent = 'Upload a person photo before generating.'; status.style.display = 'block'; }
+    toast('Upload your person photo first.');
+    return;
+  }
+  if(!garmentFile && !garmentUrl){
+    if(status){ status.textContent = 'Select a catalog garment or upload your own garment.'; status.style.display = 'block'; }
+    toast('Select or upload a garment first.');
+    return;
+  }
+
+  const formData = new FormData();
+  formData.append('design_id', designId || '');
+  formData.append('category', category);
+  formData.append('model_preset', 'custom');
+  formData.append('garment_photo_type', garmentFile ? 'flat-lay' : 'model');
+  formData.append('person_image', personFile);
+  if(garmentFile) formData.append('garment_image', garmentFile);
+  else formData.append('garment_image_url', garmentUrl);
+
+  if(status){
+    status.textContent = 'Rendering your look with FASHN VTON 1.5. This can take up to a minute...';
+    status.style.display = 'block';
+  }
+  $('#dedicated-vton-loader')?.style.setProperty('display', 'flex');
+  fetch('/api/vton/tryon/', { method: 'POST', body: formData })
+    .then(async response => {
+      const data = await response.json();
+      if(!response.ok) throw new Error(data.error || 'Try-on generation failed.');
+      return data;
+    })
+    .then(data => {
+      if(preview){
+        preview.src = data.result_image;
+        preview.style.display = 'block';
+      }
+      $('#tryon-stage-label').textContent = 'Generated result';
+      $('.tryon-result-copy')?.style.setProperty('display', 'none');
+      if(status) status.textContent = 'Your generated look is ready.';
+      toast('Virtual try-on generated.');
+    })
+    .catch(error => {
+      if(status) status.textContent = error.message;
+      toast(error.message);
+    })
+    .finally(() => {
+      $('#dedicated-vton-loader')?.style.setProperty('display', 'none');
+    });
+}
 
 /* Transfer garment to FASHN VTON Studio */
 function loadGarmentToStudio(garmentId){
@@ -351,31 +433,35 @@ function runVTONTryOn(){
     if(loaderStep) loaderStep.textContent = 'Step 3/3: Harmonizing fabric drape & lighting...';
   }, 1800);
 
-  // Send request to Django API in background
+  // Send the original images to Django; the server calls the HF Space.
   const modelPreset = $('.model-thumb.selected')?.dataset.model || 'male-1';
-  fetch('/api/vton/tryon/', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      design_id: activeGarment.id,
-      model_preset: modelPreset
-    })
-  }).catch(() => {});
+  const formData = new FormData();
+  formData.append('design_id', activeGarment.id);
+  formData.append('model_preset', modelPreset);
+  formData.append('category', $('#vton-category-select')?.value || activeGarment.vtonCategory || 'one-pieces');
+  formData.append('garment_photo_type', 'model');
+  const personUpload = $('#vton-user-upload')?.files?.[0];
+  if(personUpload) formData.append('person_image', personUpload);
+  else formData.append('person_image_url', $('.model-thumb.selected')?.dataset.img || '');
+  formData.append('garment_image_url', activeGarment.image);
 
-  setTimeout(() => {
-    loader.style.display = 'none';
-    if(outputImg){
-      outputImg.style.opacity = '0';
-      setTimeout(() => {
-        outputImg.src = activeGarment.tryonImage || activeGarment.image;
-        outputImg.style.opacity = '1';
-      }, 150);
-    }
-    if(badge){
-      badge.textContent = `✨ FASHN VTON 1.5 Render: ${activeGarment.title}`;
-    }
-    toast('Virtual Try-On generated with FASHN VTON 1.5!');
-  }, 2600);
+  fetch('/api/vton/tryon/', { method: 'POST', body: formData })
+    .then(async response => {
+      const data = await response.json();
+      if(!response.ok) throw new Error(data.error || 'Try-on generation failed.');
+      return data;
+    })
+    .then(data => {
+      if(outputImg) outputImg.src = data.result_image;
+      if(badge) badge.textContent = `✨ FASHN VTON 1.5 Render: ${activeGarment.title}`;
+      toast('Virtual Try-On generated with FASHN VTON 1.5!');
+    })
+    .catch(error => {
+      toast(error.message);
+    })
+    .finally(() => {
+      loader.style.display = 'none';
+    });
 }
 
 /* Fallback local generator */
@@ -584,6 +670,7 @@ function setupStudioEvents(){
         toast('Please upload a valid image file.');
         return;
       }
+
       const url = URL.createObjectURL(file);
       const previewImg = $('#vton-output-image');
       if(previewImg){
@@ -593,6 +680,42 @@ function setupStudioEvents(){
       }
       $$('.model-thumb').forEach(x => x.classList.remove('selected'));
       toast('Custom photo loaded into fitting canvas!');
+    });
+  }
+
+  const dedicatedPersonUpload = $('#dedicated-person-upload');
+  if(dedicatedPersonUpload){
+    dedicatedPersonUpload.addEventListener('change', () => {
+      const file = dedicatedPersonUpload.files?.[0];
+      if(!file || !file.type.startsWith('image/')) return toast('Please upload a valid person image.');
+      if(file.size > 12 * 1024 * 1024) return toast('Choose a person image smaller than 12 MB.');
+      dedicatedPersonFile = file;
+      const objectUrl = URL.createObjectURL(file);
+      const preview = $('#user-photo-preview');
+      if(preview) preview.src = objectUrl;
+      const cardPreview = $('#dedicated-person-card-preview');
+      if(cardPreview){ cardPreview.src = objectUrl; cardPreview.style.display = 'block'; }
+      const cardName = $('#dedicated-person-name');
+      if(cardName) cardName.textContent = file.name;
+      $('#tryon-stage-label').textContent = 'Your photo';
+      toast('Person photo loaded.');
+    });
+  }
+
+  const dedicatedGarmentUpload = $('#dedicated-garment-upload');
+  if(dedicatedGarmentUpload){
+    dedicatedGarmentUpload.addEventListener('change', () => {
+      const file = dedicatedGarmentUpload.files?.[0];
+      if(!file || !file.type.startsWith('image/')) return toast('Please upload a valid garment image.');
+      if(file.size > 12 * 1024 * 1024) return toast('Choose a garment image smaller than 12 MB.');
+      dedicatedGarmentFile = file;
+      const status = $('#dedicated-garment-status');
+      if(status) status.textContent = `${file.name} selected. It will replace the catalog garment.`;
+      const preview = $('#dedicated-garment-card-preview');
+      if(preview){ preview.src = URL.createObjectURL(file); preview.style.display = 'block'; }
+      const name = $('#dedicated-garment-name');
+      if(name) name.textContent = file.name;
+      toast('Custom garment loaded.');
     });
   }
 
@@ -690,4 +813,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   setupStudioEvents();
+
+  const firstTryonDesign = $('#dedicated-tryon .mini-design');
+  if(firstTryonDesign) selectTryonDesign(firstTryonDesign);
 });

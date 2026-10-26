@@ -15,6 +15,20 @@ Fitverse AI is a web application combining Nigerian & African bespoke fashion st
 
 ## 🚀 Quick Start
 
+Install the backend dependencies first:
+
+```bash
+python -m venv .venv
+python -m pip install -r requirements.txt
+```
+
+The first try-on request uses the public Hugging Face Space
+`fashn-ai/fashn-vton-1.5`. If the Space requires authentication, set
+`HF_TOKEN` in the environment. The token stays server-side and is never sent
+to the browser. Uploaded person photos are sent to the Hugging Face Space for
+inference; add consent and retention controls before using this with real
+customer data.
+
 ### 1. Run Migrations
 ```bash
 python manage.py migrate

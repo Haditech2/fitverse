@@ -1,0 +1,2 @@
+django>=5.2,<7.0
+gradio_client>=1.13,<2.0
