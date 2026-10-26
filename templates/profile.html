@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+
+{% block title %}Profile & Settings | Fitverse AI{% endblock %}
+{% block page_title %}Profile & settings{% endblock %}
+
+{% block content %}
+<div class="two-col">
+  <section class="panel">
+    <div class="panel-head">
+      <h3>Personal details</h3>
+      <span class="tag">Django User</span>
+    </div>
+    <div class="field">
+      <label>Full name</label>
+      <input value="{{ request.user.first_name|default:'Ademu Abdullah' }}" placeholder="Your full name">
+    </div>
+    <div class="field">
+      <label>Email address</label>
+      <input type="email" value="{{ request.user.email|default:'ademuabdullahadi2@gmail.com' }}" placeholder="you@example.com">
+    </div>
+    <div class="field">
+      <label>Location</label>
+      <input value="Lagos, Nigeria" placeholder="City or region">
+    </div>
+    <div class="field">
+      <label>Preferred measurement unit</label>
+      <select>
+        <option value="cm" selected>Centimetres (cm)</option>
+        <option value="in">Inches (in)</option>
+      </select>
+    </div>
+    <button type="button" onclick="toast('Profile details updated successfully.')">Save profile</button>
+  </section>
+
+  <section class="panel">
+    <h3>Preferences and privacy</h3>
+    <div class="profile-list">
+      <a href="{% url 'measurements' %}"><span>Measurement profile</span><span>→</span></a>
+      <a href="{% url 'wardrobe' %}"><span>Saved designs and looks</span><span>→</span></a>
+      <a href="{% url 'style_intelligence' %}"><span>Style Intelligence & FASHN VTON</span><span>→</span></a>
+      <a href="{% url 'image_sources' %}"><span>Image Sources & Licenses</span><span>→</span></a>
+    </div>
+    <div class="notice">
+      Fitverse AI uses Django sessions to manage your measurements and saved looks.
+    </div>
+    {% if request.user.is_authenticated %}
+      <a class="button secondary" href="{% url 'logout' %}">Log out</a>
+    {% else %}
+      <a class="button secondary" href="{% url 'login' %}">Log in</a>
+    {% endif %}
+  </section>
+</div>
+{% endblock content %}

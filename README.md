@@ -1,37 +1,65 @@
-# Fitverse AI — HTML UI prototype
+# Fitverse AI — Intelligent Fashion & FASHN VTON 1.5 Studio (Django)
 
-A multi-page, responsive HTML/CSS/JavaScript prototype for Fitverse AI.
+Fitverse AI is a web application combining Nigerian & African bespoke fashion styling (Senator wear, Ankara prints, Agbada sets, and corporate tailoring) with **FASHN VTON 1.5** neural virtual try-on, built with **Django 6.1**.
 
-## Run locally
-1. Extract the ZIP.
-2. Open `index.html` in a browser, or use VS Code Live Server.
-3. No build step or package installation is required.
+---
 
-## Pages
-- `index.html` — landing page
-- `login.html`, `signup.html`, `forgot-password.html` — authentication UI
-- `onboarding.html` — style preference onboarding
-- `dashboard.html` — user dashboard
-- `designs.html`, `design-detail.html` — fashion catalogue and design detail
-- `tryon.html` — virtual try-on workflow
-- `measurements.html` — measurement profile
-- `style-intelligence.html` — AI personal stylist chat with FASHN VTON 1.5 virtual try-on split studio
-- `wardrobe.html` — saved looks
-- `profile.html` — profile and privacy settings
+## ⚡ Tech Stack & Architecture
 
-## FASHN VTON 1.5 Integration
-The Style Intelligence workspace integrates an interactive split studio featuring [FASHN VTON v1.5](https://huggingface.co/spaces/fashn-ai/fashn-vton-1.5):
-- **Conversational AI Stylist**: Guides users on Senator wear, Ankara prints, wedding/Owambe guest styling, corporate attire, and color harmony.
-- **1-Click Studio Transfer**: Any recommended look card in the chat can be transferred directly into the fitting studio with `⚡ Try On in Studio`.
-- **Fitting Canvas & Live Space**: Test outfits on male/female models or uploaded photos, with direct embedding of the live Hugging Face Space for full MMDiT pixel-space virtual try-on.
+- **Backend**: Python 3.12, Django 6.1
+- **Database**: SQLite (ORM models for `Design`, `Category`, `UserMeasurement`, `SavedLook`, `Favorite`, `VirtualTryOn`)
+- **Virtual Try-On Model**: [fashn-ai/fashn-vton-1.5](https://huggingface.co/spaces/fashn-ai/fashn-vton-1.5) (Multimodal Diffusion MMDiT in pixel space)
+- **Frontend**: Django Templates (DTL), Vanilla CSS, Responsive Grid & Flexbox, JavaScript
 
-## Important prototype limitations
-This is frontend-only. Login, Google sign-in, password reset, server-side saving, real AI virtual try-on, automatic body measurement estimation, and AI stylist responses require backend services and/or external APIs. The current forms display demo feedback rather than contacting a server. Sample prices, measurements, and product content are placeholders. Images are loaded from Unsplash URLs and therefore require an internet connection.
+---
 
-The demo saves favourites and measurements in browser local storage. Do not use this prototype to collect real user data until authentication, privacy, storage, consent, and deletion controls are implemented.
+## 🚀 Quick Start
 
+### 1. Run Migrations
+```bash
+python manage.py migrate
+```
 
-## Fashion reference imagery added
-The Discover Designs page now includes Ankara examples and Senator-wear reference categories. Openly licensed Ankara images are embedded from Wikimedia Commons, with attribution and license details in `image-sources.html`. Senator-wear cards link to editorial lookbooks; generic placeholder images are used rather than copying photos from those publishers. Prices shown as “Inspiration” are not product prices.
+### 2. Seed Initial Fashion Catalog & Categories
+Populate the database with pre-configured Senator, Ankara, Agbada, and formal designs:
+```bash
+python manage.py seed_data
+```
 
-Image sources: https://commons.wikimedia.org/wiki/Category:Ankara_style_clothes_in_Nigeria ; https://www.mynativefashion.com/senator-wear-designs/ ; https://wysemanxclusive.lovable.app/lookbook
+### 3. Start Development Server
+```bash
+python manage.py runserver
+```
+Visit **[http://127.0.0.1:8000/](http://127.0.0.1:8000/)** in your browser.
+
+---
+
+## 🧭 Page Routes & Features
+
+| Route | View | Description |
+|---|---|---|
+| `/` | `home` | Modern landing page with hero, African fashion features, and trust strip |
+| `/dashboard/` | `dashboard` | User workspace with quick links and personalized recommendations |
+| `/designs/` | `designs_view` | Fashion catalog with category filters and keyword search |
+| `/designs/<slug>/` | `design_detail_view` | Design details with fabric, silhouette, styling advice, and try-on trigger |
+| `/style-intelligence/` | `style_intelligence_view` | **Interactive Split Studio**: Conversational AI Stylist on the left + FASHN VTON 1.5 Virtual Try-On Studio on the right |
+| `/tryon/` | `tryon_view` | Virtual fitting room canvas with model presets and photo upload |
+| `/measurements/` | `measurements_view` | Tailoring profile recording chest, waist, hips, sleeve, inseam in cm/inches |
+| `/wardrobe/` | `wardrobe_view` | Saved favorites and virtual try-on history |
+| `/profile/` | `profile_view` | User profile and account preferences |
+| `/admin/` | `admin.site.urls` | Django administrative interface |
+
+---
+
+## 🔌 API Endpoints
+
+- `POST /api/stylist/chat/` — Conversational fashion stylist engine with African fashion knowledge base and dynamic look recommendations.
+- `POST /api/vton/tryon/` — Neural try-on session pipeline.
+- `POST /api/measurements/save/` — Saves user measurements to the database.
+- `POST /api/favorite/toggle/` — Toggles saved designs in user wardrobe.
+- `POST /api/looks/save/` — Stores generated virtual try-ons.
+
+---
+
+## 🎨 Image Sources & Transparency
+All Ankara and cultural fashion imagery are openly licensed via Wikimedia Commons (CC BY-SA 4.0) and Unsplash. Full attributions are listed on `/sources/`.

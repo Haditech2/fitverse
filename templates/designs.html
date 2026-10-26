@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+
+{% block title %}Discover Designs | Fitverse AI{% endblock %}
+{% block page_title %}Discover designs{% endblock %}
+
+{% block content %}
+<div class="section-head">
+  <div>
+    <div class="eyebrow">The Fitverse edit</div>
+    <h2>Find your next look.</h2>
+  </div>
+  <p>Explore Senator wear, authentic Ankara prints, Agbada sets, and contemporary formal suiting.</p>
+</div>
+
+<form method="GET" action="{% url 'designs' %}" class="toolbar">
+  <input class="search-input" name="q" id="design-search" value="{{ search_query }}" placeholder="Search designs, styles, occasions…" aria-label="Search designs">
+  <select class="filter-select" name="category" id="category-filter" aria-label="Filter by category" onchange="this.form.submit()">
+    <option value="all" {% if selected_category == 'all' %}selected{% endif %}>All categories</option>
+    {% for cat in categories %}
+      <option value="{{ cat.slug }}" {% if selected_category == cat.slug %}selected{% endif %}>{{ cat.name }}</option>
+    {% endfor %}
+  </select>
+  <button type="submit" class="button small">Filter</button>
+</form>
+
+<div class="product-grid">
+  {% for design in designs %}
+  <article class="product-card" data-category="{{ design.category.slug }}" data-search="{{ design.title }} {{ design.search_keywords }}">
+    <div class="product-image">
+      <a href="{% url 'design_detail' design.slug %}">
+        <img loading="lazy" src="{{ design.image_url }}" alt="{{ design.title }}">
+      </a>
+      {% if design.source_label %}
+        <span class="tag image-credit">{{ design.source_label }}</span>
+      {% endif %}
+      <button class="heart" aria-label="Save {{ design.title }}" data-favorite="{{ design.id }}">♡</button>
+    </div>
+    <div class="product-info">
+      <h3>{{ design.title }}</h3>
+      <p>{{ design.description|truncatewords:7 }}</p>
+      <div class="price">{{ design.price_label }}</div>
+      <span class="tag">{{ design.category.name }}</span>
+      {% if design.source_link %}
+        <p class="source-link"><a href="{{ design.source_link }}" target="_blank" rel="noopener">Explore reference ↗</a></p>
+      {% endif %}
+    </div>
+  </article>
+  {% empty %}
+  <div id="no-results" class="empty-state" style="grid-column: 1 / -1; margin-top:20px">
+    <h3>No designs found</h3>
+    <p>Try another search or <a href="{% url 'designs' %}" style="text-decoration:underline;">view all categories</a>.</p>
+  </div>
+  {% endfor %}
+</div>
+
+<p class="muted" style="font-size:12px;margin-top:28px">
+  Images from Wikimedia Commons and Unsplash under open licenses. <a href="{% url 'image_sources' %}" style="color:var(--plum);text-decoration:underline;">See all source attributions</a>.
+</p>
+{% endblock content %}

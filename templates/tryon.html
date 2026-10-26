@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+
+{% block title %}Virtual Try-On | Fitverse AI{% endblock %}
+{% block page_title %}Virtual try-on{% endblock %}
+
+{% block content %}
+<div class="section-head">
+  <div>
+    <div class="eyebrow">Your personal fitting room</div>
+    <h2>Try a different point of view.</h2>
+  </div>
+  <p>Upload a clear photo, select a design, and preview your look. For conversational recommendations and FASHN VTON 1.5, visit <a href="{% url 'style_intelligence' %}" style="color:var(--plum);text-decoration:underline;">Style Intelligence</a>.</p>
+</div>
+
+<div class="split-layout">
+  <section>
+    <div class="tryon-stage">
+      <span class="stage-label">Your photo</span>
+      <img id="user-photo-preview" src="https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=900&q=85" alt="Example portrait">
+    </div>
+    <div class="panel" style="margin-top:14px">
+      <div class="panel-head">
+        <h3>Upload your photo</h3>
+        <span class="muted" style="font-size:12px">JPG or PNG · up to 12 MB</span>
+      </div>
+      <p>For best results, use a clear, well-lit photo with your full outfit visible and minimal obstruction.</p>
+      <input type="file" accept="image/*" onchange="previewUpload(this,'#user-photo-preview')">
+      <div class="notice">
+        Photo is previewed locally in your browser. Connect to FASHN VTON 1.5 for generative try-on.
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="panel">
+      <div class="panel-head">
+        <h3>Choose a design</h3>
+        <a href="{% url 'designs' %}" class="text-button">Browse all</a>
+      </div>
+      
+      <div class="mini-designs">
+        {% for design in preset_designs %}
+          <button type="button" class="mini-design {% if forloop.first %}selected{% endif %}" data-choice onclick="document.getElementById('user-photo-preview').src='{{ design.image_url }}'">
+            <img src="{{ design.image_url }}" alt="{{ design.title }}">
+            <span>{{ design.title|truncatewords:2 }}</span>
+          </button>
+        {% endfor %}
+      </div>
+
+      <div class="field" style="margin-top:22px">
+        <label for="fit-style">Preferred fit</label>
+        <select id="fit-style">
+          <option>Regular</option>
+          <option>Slim</option>
+          <option>Relaxed</option>
+          <option>Oversized</option>
+        </select>
+      </div>
+
+      <div class="actions">
+        <button type="button" onclick="generateTryOn()">Prepare try-on ↗</button>
+        <button type="button" class="secondary" onclick="saveLook()">Save photo</button>
+      </div>
+      <div id="tryon-status" class="notice" style="display:none;margin-top:18px"></div>
+    </div>
+
+    <div class="panel" style="margin-top:14px">
+      <h3>FASHN VTON 1.5 Studio</h3>
+      <p>Want direct virtual try-on with neural diffusion? Switch to our new <a href="{% url 'style_intelligence' %}" style="color:var(--plum);font-weight:700;text-decoration:underline;">Style Intelligence Split Studio</a> for live AI rendering.</p>
+    </div>
+  </section>
+</div>
+{% endblock content %}

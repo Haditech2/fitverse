@@ -1,0 +1,46 @@
+{% load static %}
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Fashion image sources | Fitverse AI</title>
+  <link rel="stylesheet" href="{% static 'assets/styles.css' %}">
+</head>
+<body>
+  <main class="app-main" style="max-width:900px;margin:auto;padding:36px 22px">
+    <a class="logo" href="{% url 'home' %}">Fitverse<span> AI</span></a>
+    <div class="eyebrow" style="margin-top:32px">Transparency</div>
+    <h1>Fashion inspiration & image credits</h1>
+    <p>Fitverse uses a mix of openly licensed reference imagery and links to fashion editorial lookbooks. Images are for inspiration in this prototype; they are not Fitverse-owned designs and should not be represented as products available for sale.</p>
+    
+    <section class="panel" style="padding:22px;margin:20px 0">
+      <h2>Ankara designs</h2>
+      <ul>
+        <li><a href="https://commons.wikimedia.org/wiki/File:Ankara_dress.jpg" target="_blank" rel="noopener">“Ankara dress.jpg”</a> — Exclusive by Tola, Wikimedia Commons. <a href="https://creativecommons.org/licenses/by-sa/4.0/" target="_blank" rel="noopener">CC BY-SA 4.0</a>.</li>
+        <li><a href="https://commons.wikimedia.org/wiki/File:Cowries_Print_Maxi_Dress.JPG" target="_blank" rel="noopener">“Cowries Print Maxi Dress.JPG”</a> — Vivid Eloquence, Wikimedia Commons. <a href="https://creativecommons.org/licenses/by-sa/4.0/" target="_blank" rel="noopener">CC BY-SA 4.0</a>.</li>
+        <li><a href="https://commons.wikimedia.org/wiki/File:A_Nigerian_lady_in_Ankara_clothing.jpg" target="_blank" rel="noopener">“A Nigerian lady in Ankara clothing.jpg”</a> — Jamie Tubers, Wikimedia Commons. <a href="https://creativecommons.org/licenses/by-sa/4.0/" target="_blank" rel="noopener">CC BY-SA 4.0</a>.</li>
+      </ul>
+      <p>Images are embedded from Wikimedia Commons. The relevant file pages contain the full license details. No image edits were made.</p>
+    </section>
+
+    <section class="panel" style="padding:22px;margin:20px 0">
+      <h2>Senator wear references</h2>
+      <ul>
+        <li><a href="https://www.mynativefashion.com/senator-wear-designs/" target="_blank" rel="noopener">MyNativeFashion — Senator Wear Designs for Men</a>. Editorial inspiration; visit the source for original images and rights information.</li>
+        <li><a href="https://wysemanxclusive.lovable.app/lookbook" target="_blank" rel="noopener">Wyseman Xclusive — Nigerian Menswear Lookbook</a>. Senator, agbada, kaftan and native style references.</li>
+        <li><a href="https://www.mynativefashion.com/nigerian-native-styles-for-men/" target="_blank" rel="noopener">MyNativeFashion — Nigerian Native Styles for Men</a>. Additional native-wear inspiration.</li>
+      </ul>
+      <p>Senator wear cards in this prototype use generic fashion placeholders and link to these references; they do not copy editorial images from those sites.</p>
+    </section>
+
+    <section class="panel" style="padding:22px;margin:20px 0">
+      <h2>Virtual Try-On AI Engine</h2>
+      <p>Virtual try-on capabilities are powered by <strong>FASHN VTON 1.5</strong> (<a href="https://huggingface.co/spaces/fashn-ai/fashn-vton-1.5" target="_blank" rel="noopener">fashn-ai/fashn-vton-1.5</a>), hosted on Hugging Face Spaces using the MMDiT Multimodal Diffusion architecture.</p>
+    </section>
+
+    <p class="muted">Before commercial launch, replace placeholders with designer-submitted photos, commissioned photography, or images with verified commercial-use licenses.</p>
+    <a class="button" href="{% url 'designs' %}">Back to designs ↗</a>
+  </main>
+</body>
+</html>

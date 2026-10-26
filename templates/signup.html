@@ -1,0 +1,63 @@
+{% load static %}
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Create account | Fitverse AI</title>
+  <link rel="stylesheet" href="{% static 'assets/styles.css' %}">
+</head>
+<body>
+  <main class="auth-layout">
+    <section class="auth-visual">
+      <img src="https://images.unsplash.com/photo-1509631179647-0177331693ae?auto=format&fit=crop&w=900&q=85" alt="Fashion tailoring">
+      <div class="auth-caption">
+        <div class="eyebrow" style="color:#f2dbe8">Fitverse AI</div>
+        <h2>Bespoke fashion,<br>reimagined.</h2>
+        <p>Curate traditional and modern looks tailored to your exact measurements.</p>
+      </div>
+    </section>
+
+    <section class="auth-content">
+      <form class="auth-form" method="POST" action="{% url 'signup' %}">
+        {% csrf_token %}
+        <a class="logo" href="{% url 'home' %}">Fitverse<span> AI</span></a>
+        <h1>Create your account</h1>
+        <p>Build your style profile and try on outfits virtually.</p>
+
+        {% if error %}
+          <div class="notice" style="background:#fde8e8;border-color:#e02424;color:#9b1c1c;">
+            {{ error }}
+          </div>
+        {% endif %}
+
+        <div class="field">
+          <label for="name">Full name</label>
+          <input id="name" name="name" placeholder="e.g. Ademu Abdullah" required>
+        </div>
+
+        <div class="field">
+          <label for="email">Email address</label>
+          <input id="email" name="email" type="email" placeholder="you@example.com" required>
+        </div>
+
+        <div class="field">
+          <label for="password">Password</label>
+          <input id="password" name="password" type="password" placeholder="At least 6 characters" required>
+        </div>
+
+        <button class="full" type="submit">Create account</button>
+
+        <p style="text-align:center;margin-top:25px;font-size:13px">
+          Already have an account? <a href="{% url 'login' %}" style="color:var(--plum);font-weight:700">Log in</a>
+        </p>
+        <p style="font-size:11px;text-align:center;margin-top:25px">
+          <a href="{% url 'home' %}">← Back to Fitverse</a>
+        </p>
+      </form>
+    </section>
+  </main>
+  <div id="toast" class="toast"></div>
+  <script src="{% static 'assets/app.js' %}"></script>
+</body>
+</html>

@@ -1,0 +1,192 @@
+from django.core.management.base import BaseCommand
+from fitverse_app.models import Category, Design
+
+class Command(BaseCommand):
+    help = 'Seeds initial categories and fashion designs into the database'
+
+    def handle(self, *args, **options):
+        self.stdout.write("Seeding categories...")
+        categories_data = [
+            {'name': 'Senator Wear', 'slug': 'senator', 'description': 'Refined Nigerian native tailoring with crisp structure.'},
+            {'name': 'Ankara Print', 'slug': 'ankara', 'description': 'Vibrant African wax prints and contemporary patterns.'},
+            {'name': 'Traditional', 'slug': 'traditional', 'description': 'Classic native wear, Kaftans, and cultural attire.'},
+            {'name': 'Formal', 'slug': 'formal', 'description': 'Executive suiting, double-breasted blazers, and boardroom styles.'},
+            {'name': 'Occasion Wear', 'slug': 'occasion', 'description': 'Grand Owambe, wedding guest, and evening statements.'},
+            {'name': 'Casual', 'slug': 'casual', 'description': 'Effortless everyday pieces and contemporary streetwear.'},
+            {'name': 'Agbada', 'slug': 'agbada', 'description': 'Regal 3-piece flowing traditional agbada sets.'},
+        ]
+
+        cat_objs = {}
+        for c in categories_data:
+            obj, _ = Category.objects.get_or_create(slug=c['slug'], defaults={'name': c['name'], 'description': c['description']})
+            cat_objs[c['slug']] = obj
+
+        self.stdout.write("Seeding designs...")
+        designs_data = [
+            {
+                'title': 'Classic Royal Navy Senator Set',
+                'slug': 'classic-royal-navy-senator',
+                'category': cat_objs['senator'],
+                'price': 45000,
+                'price_label': '₦45,000',
+                'fabric': 'Italian Cashmere Wool',
+                'silhouette': 'Tailored Native',
+                'image_url': 'https://images.unsplash.com/photo-1617137968427-85924c800a22?auto=format&fit=crop&w=900&q=85',
+                'description': 'Structured navy tailoring with clean Mandarin collar and tapered matching trousers.',
+                'styling_advice': 'Pair with burnished cognac monkstrap shoes, a silver timepiece, and an optional navy velvet fila cap.',
+                'search_keywords': 'senator navy blue traditional native tailored men wedding owambe',
+                'vton_category': 'one-pieces',
+                'is_featured': True,
+            },
+            {
+                'title': 'Ankara Heritage Celebration Gown',
+                'slug': 'ankara-heritage-celebration-gown',
+                'category': cat_objs['ankara'],
+                'price': 38000,
+                'price_label': '₦38,000',
+                'fabric': 'Authentic Dutch Wax Print',
+                'silhouette': 'Hourglass Wrap',
+                'image_url': 'https://upload.wikimedia.org/wikipedia/commons/4/4d/Ankara_dress.jpg',
+                'source_link': 'https://commons.wikimedia.org/wiki/File:Ankara_dress.jpg',
+                'source_label': 'Wikimedia Commons',
+                'description': 'Rich jewel tones with geometric wax print, sweetheart neckline and structured sleeves.',
+                'styling_advice': 'Complement with gold drop earrings, neutral block heels, and a minimalist metallic clutch.',
+                'search_keywords': 'ankara dress gown wax print women celebration wedding traditional',
+                'vton_category': 'one-pieces',
+                'is_featured': True,
+            },
+            {
+                'title': 'Modern Charcoal & Wine Senator',
+                'slug': 'modern-charcoal-wine-senator',
+                'category': cat_objs['senator'],
+                'price': 52000,
+                'price_label': '₦52,000',
+                'fabric': 'Super 120s Polished Wool',
+                'silhouette': 'Slim Fit',
+                'image_url': 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=900&q=85',
+                'source_link': 'https://wysemanxclusive.lovable.app/lookbook',
+                'source_label': 'Style Reference',
+                'description': 'Crisp charcoal base highlighted with subtle wine embroidery along the chest placket.',
+                'styling_advice': 'Wear with black patent loafers or Oxford shoes. Excellent for both formal ceremonies and evening receptions.',
+                'search_keywords': 'senator charcoal wine grey embroidery tailored native',
+                'vton_category': 'one-pieces',
+                'is_featured': True,
+            },
+            {
+                'title': 'Cowries Print Statement Maxi Gown',
+                'slug': 'cowries-print-statement-maxi',
+                'category': cat_objs['ankara'],
+                'price': 42000,
+                'price_label': '₦42,000',
+                'fabric': 'African Cotton Wax Print',
+                'silhouette': 'Flowing Maxi',
+                'image_url': 'https://upload.wikimedia.org/wikipedia/commons/0/0b/Cowries_Print_Maxi_Dress.JPG',
+                'source_link': 'https://commons.wikimedia.org/wiki/File:Cowries_Print_Maxi_Dress.JPG',
+                'source_label': 'Wikimedia Commons',
+                'description': 'Floor-length dramatic African print silhouette with flared movement and vibrant color.',
+                'styling_advice': 'Style with chunky bronze bangles, strappy sandals, and understated ear studs.',
+                'search_keywords': 'ankara maxi cowries print gown african traditional dress',
+                'vton_category': 'one-pieces',
+                'is_featured': False,
+            },
+            {
+                'title': 'Executive Midnight Double-Breasted Suit',
+                'slug': 'executive-midnight-double-breasted-suit',
+                'category': cat_objs['formal'],
+                'price': 65000,
+                'price_label': '₦65,000',
+                'fabric': 'Italian Wool Blend',
+                'silhouette': 'Executive Tailored',
+                'image_url': 'https://images.unsplash.com/photo-1483985988355-763728e1935b?auto=format&fit=crop&w=900&q=85',
+                'description': 'Sharp peak-lapel jacket with structured shoulders and tapered trousers.',
+                'styling_advice': 'Pair with a crisp white poplin shirt, silk pocket square, and derby shoes.',
+                'search_keywords': 'formal suit executive double breasted corporate black navy wool',
+                'vton_category': 'tops',
+                'is_featured': True,
+            },
+            {
+                'title': 'Contemporary Ankara Fusion Blazer',
+                'slug': 'contemporary-ankara-fusion-blazer',
+                'category': cat_objs['ankara'],
+                'price': 36000,
+                'price_label': '₦36,000',
+                'fabric': 'Wax Print & Cotton Twill',
+                'silhouette': 'Smart Casual',
+                'image_url': 'https://upload.wikimedia.org/wikipedia/commons/8/8e/A_Nigerian_lady_in_Ankara_clothing.jpg',
+                'source_link': 'https://commons.wikimedia.org/wiki/File:A_Nigerian_lady_in_Ankara_clothing.jpg',
+                'source_label': 'Wikimedia Commons',
+                'description': 'Vibrant print panels tailored into a modern unlined blazer.',
+                'styling_advice': 'Pair with high-waisted neutral slacks or dark denim and sleek mules for creative business casual.',
+                'search_keywords': 'ankara blazer jacket casual smart fusion women print',
+                'vton_category': 'tops',
+                'is_featured': False,
+            },
+            {
+                'title': 'Grandeur 3-Piece Agbada Set',
+                'slug': 'grandeur-3-piece-agbada-set',
+                'category': cat_objs['agbada'],
+                'price': 85000,
+                'price_label': '₦85,000',
+                'fabric': 'Swiss Damask & Brocade',
+                'silhouette': 'Regal Flow',
+                'image_url': 'https://images.unsplash.com/photo-1525507119028-ed4c629a60a3?auto=format&fit=crop&w=900&q=85',
+                'description': 'Intricate cord embroidery across chest and wide flowing sleeves.',
+                'styling_advice': 'Complete with a traditional Abeti Aja or Gobi cap, coral bead necklace, and velvet slippers.',
+                'search_keywords': 'agbada traditional wedding groom royal damask luxury embroidery',
+                'vton_category': 'one-pieces',
+                'is_featured': True,
+            },
+            {
+                'title': 'Everyday Expression Casual Set',
+                'slug': 'everyday-expression-casual-set',
+                'category': cat_objs['casual'],
+                'price': 28000,
+                'price_label': '₦28,000',
+                'fabric': 'Linen & Cotton Blend',
+                'silhouette': 'Relaxed Fit',
+                'image_url': 'https://images.unsplash.com/photo-1529139574466-a303027c1d8b?auto=format&fit=crop&w=900&q=85',
+                'description': 'Breathable two-piece coordinate designed for effortless warm-weather style.',
+                'styling_advice': 'Wear with clean white leather sneakers or woven slides.',
+                'search_keywords': 'casual everyday linen coordinate relaxed weekend',
+                'vton_category': 'one-pieces',
+                'is_featured': False,
+            },
+            {
+                'title': 'Modern Tailoring Neutral Set',
+                'slug': 'modern-tailoring-neutral-set',
+                'category': cat_objs['formal'],
+                'price': 55000,
+                'price_label': '₦55,000',
+                'fabric': 'Structured Twill',
+                'silhouette': 'Clean Line',
+                'image_url': 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=900&q=85',
+                'description': 'Clean, structured silhouette with minimal stitching and high-rise trousers.',
+                'styling_advice': 'Keep accessories minimal: leather tote and pointed-toe flats.',
+                'search_keywords': 'formal modern tailoring neutral minimal smart work',
+                'vton_category': 'tops',
+                'is_featured': False,
+            },
+            {
+                'title': 'Evening Occasion Dress',
+                'slug': 'evening-occasion-dress',
+                'category': cat_objs['occasion'],
+                'price': 72000,
+                'price_label': '₦72,000',
+                'fabric': 'Silk Crepe & Satin',
+                'silhouette': 'Column Silhouette',
+                'image_url': 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=900&q=85',
+                'description': 'Refined evening gown with asymmetric draped neckline and waist accent.',
+                'styling_advice': 'Style with statement chandelier earrings and metallic strappy stilettos.',
+                'search_keywords': 'occasion evening gala party wedding dinner gown dress',
+                'vton_category': 'one-pieces',
+                'is_featured': False,
+            }
+        ]
+
+        for d in designs_data:
+            Design.objects.update_or_create(
+                slug=d['slug'],
+                defaults=d
+            )
+
+        self.stdout.write(self.style.SUCCESS('Successfully seeded Fitverse fashion categories and designs!'))

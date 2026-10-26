@@ -1,0 +1,70 @@
+{% load static %}
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#542642">
+  <title>{% block title %}Fitverse AI — Intelligent Fashion & Virtual Try-On{% endblock %}</title>
+  <link rel="stylesheet" href="{% static 'assets/styles.css' %}">
+  {% block extra_head %}{% endblock %}
+</head>
+<body>
+  {% block body %}
+  <div class="app-shell">
+    <aside class="sidebar">
+      <a class="logo" href="{% url 'dashboard' %}">Fitverse<span> AI</span></a>
+      <div>
+        <div class="side-label">Workspace</div>
+        <nav class="side-nav">
+          <a class="{% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}" href="{% url 'dashboard' %}"><span>⌂</span>Home</a>
+          <a class="{% if request.resolver_match.url_name == 'designs' or request.resolver_match.url_name == 'design_detail' %}active{% endif %}" href="{% url 'designs' %}"><span>▦</span>Discover Designs</a>
+          <a class="{% if request.resolver_match.url_name == 'tryon' %}active{% endif %}" href="{% url 'tryon' %}"><span>◉</span>Virtual Try-On</a>
+          <a class="{% if request.resolver_match.url_name == 'measurements' %}active{% endif %}" href="{% url 'measurements' %}"><span>↔</span>My Measurements</a>
+          <a class="{% if request.resolver_match.url_name == 'style_intelligence' %}active{% endif %}" href="{% url 'style_intelligence' %}"><span>✳</span>Style Intelligence</a>
+          <a class="{% if request.resolver_match.url_name == 'wardrobe' %}active{% endif %}" href="{% url 'wardrobe' %}"><span>♡</span>My Wardrobe</a>
+          <a class="{% if request.resolver_match.url_name == 'profile' %}active{% endif %}" href="{% url 'profile' %}"><span>○</span>Profile & Settings</a>
+        </nav>
+      </div>
+      <div class="sidebar-bottom">
+        Your style. Your fit.<br/>Your intelligence.
+      </div>
+    </aside>
+
+    <main class="app-main">
+      <div class="app-top">
+        <div>
+          <div class="eyebrow">Fitverse AI / Workspace</div>
+          <h1>{% block page_title %}Fitverse AI{% endblock %}</h1>
+        </div>
+        <div class="profile-chip">
+          <div class="avatar">{{ request.user.first_name|default:request.user.username|default:"A"|slice:":1"|upper }}</div>
+          <span class="profile-name">
+            {% if request.user.is_authenticated %}
+              {{ request.user.first_name|default:request.user.username }} (<a href="{% url 'logout' %}" style="text-decoration:underline;">Logout</a>)
+            {% else %}
+              <a href="{% url 'login' %}">Sign In</a>
+            {% endif %}
+          </span>
+        </div>
+      </div>
+
+      {% block content %}{% endblock %}
+    </main>
+  </div>
+
+  <nav class="mobile-bottom">
+    <a class="{% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}" href="{% url 'dashboard' %}"><span>⌂</span><span>Home</span></a>
+    <a class="{% if request.resolver_match.url_name == 'designs' %}active{% endif %}" href="{% url 'designs' %}"><span>▦</span><span>Designs</span></a>
+    <a class="{% if request.resolver_match.url_name == 'tryon' %}active{% endif %}" href="{% url 'tryon' %}"><span>◉</span><span>Try-On</span></a>
+    <a class="{% if request.resolver_match.url_name == 'style_intelligence' %}active{% endif %}" href="{% url 'style_intelligence' %}"><span>✳</span><span>Stylist</span></a>
+    <a class="{% if request.resolver_match.url_name == 'wardrobe' %}active{% endif %}" href="{% url 'wardrobe' %}"><span>♡</span><span>Wardrobe</span></a>
+    <a class="{% if request.resolver_match.url_name == 'profile' %}active{% endif %}" href="{% url 'profile' %}"><span>○</span><span>Profile</span></a>
+  </nav>
+  {% endblock body %}
+
+  <div id="toast" class="toast"></div>
+  <script src="{% static 'assets/app.js' %}"></script>
+  {% block extra_scripts %}{% endblock %}
+</body>
+</html>

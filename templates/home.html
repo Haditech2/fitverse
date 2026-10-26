@@ -1,0 +1,222 @@
+{% load static %}
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#542642">
+  <meta name="description" content="Fitverse AI helps you discover designs, preview outfits with FASHN VTON 1.5, understand your fit, and find your personal style.">
+  <title>Fitverse AI — Your style. Your fit.</title>
+  <link rel="stylesheet" href="{% static 'assets/styles.css' %}">
+</head>
+<body>
+  <!-- Public Site Header -->
+  <header class="site-header">
+    <a class="logo" href="{% url 'home' %}">Fitverse<span> AI</span></a>
+    <nav id="main-nav" class="nav">
+      <a class="active" href="{% url 'home' %}">Home</a>
+      <a class="" href="{% url 'designs' %}">Designs</a>
+      <a class="" href="{% url 'tryon' %}">Try-On</a>
+      <a class="" href="{% url 'style_intelligence' %}">Style AI</a>
+      <a class="" href="#how-it-works">About</a>
+    </nav>
+    <div class="header-actions">
+      {% if request.user.is_authenticated %}
+        <a class="button small" href="{% url 'dashboard' %}">Open Workspace ↗</a>
+      {% else %}
+        <a class="login-link" href="{% url 'login' %}">Log in</a>
+        <a class="button small" href="{% url 'signup' %}">Get started</a>
+      {% endif %}
+      <button class="menu-toggle" onclick="toggleMenu()" aria-label="Open navigation">☰</button>
+    </div>
+  </header>
+
+  <main>
+    <!-- Hero Section -->
+    <section class="wrap hero">
+      <div class="hero-copy">
+        <div class="eyebrow">Fashion, made personal</div>
+        <h1>See the style.<br>Know your fit.<br><em>Own your look.</em></h1>
+        <p>Discover Senator wear, Ankara prints, and modern tailoring. Preview outfits on your photo with <strong>FASHN VTON 1.5</strong> — all in one place.</p>
+        <div class="actions">
+          <a class="button" href="{% url 'style_intelligence' %}">Try on with AI Stylist ↗</a>
+          <a class="button secondary" href="{% url 'designs' %}">Explore designs</a>
+        </div>
+        <p style="font-size:12px;margin-top:22px">Powered by Django & FASHN VTON 1.5 MMDiT Diffusion.</p>
+      </div>
+      <div class="hero-visual">
+        <img src="https://images.unsplash.com/photo-1539109136881-3be0616acf4b?auto=format&fit=crop&w=900&q=85" alt="Fashion editorial portrait">
+        <div class="image-note">
+          <strong>Your style, reimagined.</strong>
+          <span class="muted">Curate traditional and contemporary looks in real time.</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Trust Strip -->
+    <div class="wrap trust-strip">
+      <div class="trust-item">
+        <span class="mini-icon">◉</span>
+        <div><strong>Virtual try-on</strong><br><span class="muted">FASHN VTON 1.5 neural fit</span></div>
+      </div>
+      <div class="trust-item">
+        <span class="mini-icon">↔</span>
+        <div><strong>Personal measurements</strong><br><span class="muted">Precision tailoring profile</span></div>
+      </div>
+      <div class="trust-item">
+        <span class="mini-icon">◇</span>
+        <div><strong>Curated designs</strong><br><span class="muted">Senator & Ankara heritage</span></div>
+      </div>
+      <div class="trust-item">
+        <span class="mini-icon">✳</span>
+        <div><strong>Style intelligence</strong><br><span class="muted">Conversational fashion advisor</span></div>
+      </div>
+    </div>
+
+    <!-- Featured Collections -->
+    <section class="wrap section">
+      <div class="section-head">
+        <div>
+          <div class="eyebrow">A world of looks</div>
+          <h2>Find your kind of style.</h2>
+        </div>
+        <a class="text-button" href="{% url 'designs' %}">Explore all designs ↗</a>
+      </div>
+      <div class="collection-grid">
+        <a class="collection-card" href="{% url 'designs' %}?category=senator">
+          <img loading="lazy" src="https://images.unsplash.com/photo-1617137968427-85924c800a22?auto=format&fit=crop&w=900&q=85" alt="Modern traditional menswear">
+          <h3>Senator & Native</h3>
+          <p>Clean tailoring with structured collars</p>
+        </a>
+        <a class="collection-card" href="{% url 'designs' %}?category=ankara">
+          <img loading="lazy" src="https://upload.wikimedia.org/wikipedia/commons/4/4d/Ankara_dress.jpg" alt="Ankara celebration">
+          <h3>Ankara Heritage</h3>
+          <p>Expressive wax prints and gowns</p>
+        </a>
+        <a class="collection-card" href="{% url 'designs' %}?category=occasion">
+          <img loading="lazy" src="https://images.unsplash.com/photo-1525507119028-ed4c629a60a3?auto=format&fit=crop&w=900&q=85" alt="Occasion fashion">
+          <h3>Owambe & Gala</h3>
+          <p>Memorable celebratory presence</p>
+        </a>
+        <a class="collection-card" href="{% url 'designs' %}?category=formal">
+          <img loading="lazy" src="https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=900&q=85" alt="Elegant modern fashion">
+          <h3>Executive Suiting</h3>
+          <p>Clean lines, confident silhouettes</p>
+        </a>
+      </div>
+    </section>
+
+    <!-- Feature Band -->
+    <section class="wrap feature-band">
+      <div>
+        <div class="eyebrow">Made around you</div>
+        <h2>Fashion should fit your life — and your body.</h2>
+        <p class="muted">From conversational discovery to FASHN VTON neural try-on, Fitverse brings styling, precision fit, and bespoke luxury into one thoughtful experience.</p>
+        <a class="button" href="{% url 'signup' %}">Build your style profile ↗</a>
+      </div>
+      <div class="feature-list">
+        <div class="feature-row">
+          <span class="num">01</span>
+          <div>
+            <h3>FASHN VTON 1.5 Virtual Try-On</h3>
+            <p>Preview outfits on yourself in pixel space using maskless multimodal diffusion.</p>
+          </div>
+        </div>
+        <div class="feature-row">
+          <span class="num">02</span>
+          <div>
+            <h3>Precision Tailoring Profile</h3>
+            <p>Store your chest, waist, shoulder, and inseam measurements in cm or inches.</p>
+          </div>
+        </div>
+        <div class="feature-row">
+          <span class="num">03</span>
+          <div>
+            <h3>African & Contemporary Designs</h3>
+            <p>Explore Senator wear, Ankara prints, Agbada sets, and boardroom tailoring.</p>
+          </div>
+        </div>
+        <div class="feature-row">
+          <span class="num">04</span>
+          <div>
+            <h3>Conversational Stylist Chatbot</h3>
+            <p>Chat directly with an AI fashion advisor for event styling, color theory, and budget coordination.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- How it works -->
+    <section class="wrap section" id="how-it-works">
+      <div class="section-head">
+        <div>
+          <div class="eyebrow">A simple process</div>
+          <h2>Your next look starts here.</h2>
+        </div>
+        <p>A few thoughtful steps between inspiration and your next favourite look.</p>
+      </div>
+      <div class="how-grid">
+        <div class="how-step">
+          <div class="number">01</div>
+          <h3>Chat with the Stylist</h3>
+          <p class="muted">Describe your event, preferred colors, or budget in natural language.</p>
+        </div>
+        <div class="how-step">
+          <div class="number">02</div>
+          <h3>Try on with FASHN VTON</h3>
+          <p class="muted">Send any recommended look card into the interactive studio with one click.</p>
+        </div>
+        <div class="how-step">
+          <div class="number">03</div>
+          <h3>Save to Your Wardrobe</h3>
+          <p class="muted">Store your favorite looks, share styles, and keep measurements ready for your tailor.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- CTA -->
+    <section class="wrap cta">
+      <div>
+        <div class="eyebrow">Your style, your call</div>
+        <h2>Ready to find the look that feels like you?</h2>
+      </div>
+      <a class="button light" href="{% url 'designs' %}">Explore Fitverse ↗</a>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="wrap">
+      <div class="footer-main">
+        <div>
+          <a class="logo" href="{% url 'home' %}">Fitverse<span> AI</span></a>
+          <p class="muted" style="max-width:250px;margin-top:14px;font-size:13px">Your style. Your fit. Your intelligence.</p>
+        </div>
+        <div>
+          <h4>Explore</h4>
+          <a href="{% url 'designs' %}">Designs</a>
+          <a href="{% url 'tryon' %}">Virtual try-on</a>
+          <a href="{% url 'measurements' %}">Measurements</a>
+        </div>
+        <div>
+          <h4>Your space</h4>
+          <a href="{% url 'style_intelligence' %}">Style Intelligence</a>
+          <a href="{% url 'wardrobe' %}">My wardrobe</a>
+          <a href="{% url 'profile' %}">Profile</a>
+        </div>
+        <div>
+          <h4>Fashion Tech</h4>
+          <p class="muted" style="font-size:13px">Integrated with FASHN VTON 1.5 MMDiT model.</p>
+          <a href="{% url 'image_sources' %}" style="font-size:12px;color:var(--plum);">View Image Attributions ↗</a>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <span>© 2026 Fitverse AI (Django Edition). All rights reserved.</span>
+        <span>Privacy · Terms · Contact</span>
+      </div>
+    </div>
+  </footer>
+
+  <div id="toast" class="toast"></div>
+  <script src="{% static 'assets/app.js' %}"></script>
+</body>
+</html>

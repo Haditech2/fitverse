@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard | Fitverse AI{% endblock %}
+{% block page_title %}Your style space{% endblock %}
+
+{% block content %}
+<section class="dashboard-hero">
+  <div class="dashboard-hero-copy">
+    <div class="eyebrow" style="color:#e9c7d9">Your style space</div>
+    <h2>Welcome{% if request.user.is_authenticated %}, {{ request.user.first_name|default:request.user.username }}{% endif %}.</h2>
+    <p>Something new is waiting to be discovered. Explore traditional Senator styles, Ankara prints, or test a virtual try-on with FASHN VTON 1.5.</p>
+    <a class="button light" href="{% url 'style_intelligence' %}">Open AI Stylist Studio ↗</a>
+  </div>
+  <img src="https://images.unsplash.com/photo-1529139574466-a303027c1d8b?auto=format&fit=crop&w=900&q=85" alt="Contemporary fashion">
+</section>
+
+<div class="panel-head">
+  <h2>Make it personal</h2>
+  <span class="muted" style="font-size:12px">Your quick access</span>
+</div>
+
+<div class="quick-grid">
+  <a class="quick-link" href="{% url 'tryon' %}">
+    <div class="quick-icon">◉</div>
+    <strong>Virtual Try-On</strong>
+    <span>Preview outfits on your photo</span>
+  </a>
+  <a class="quick-link" href="{% url 'measurements' %}">
+    <div class="quick-icon">↔</div>
+    <strong>Measurements</strong>
+    <span>Keep your fit profile current</span>
+  </a>
+  <a class="quick-link" href="{% url 'style_intelligence' %}">
+    <div class="quick-icon">✳</div>
+    <strong>Style Intelligence</strong>
+    <span>Chat with your AI stylist</span>
+  </a>
+  <a class="quick-link" href="{% url 'designs' %}">
+    <div class="quick-icon">◇</div>
+    <strong>Explore Designs</strong>
+    <span>Discover bespoke pieces</span>
+  </a>
+</div>
+
+<section>
+  <div class="section-head">
+    <div>
+      <div class="eyebrow">A few ideas for you</div>
+      <h2>Explore the collection.</h2>
+    </div>
+    <a class="text-button" href="{% url 'designs' %}">View all ↗</a>
+  </div>
+
+  <div class="product-grid">
+    {% for design in recent_designs %}
+    <article class="product-card" data-category="{{ design.category.slug }}" data-search="{{ design.title }} {{ design.search_keywords }}">
+      <div class="product-image">
+        <a href="{% url 'design_detail' design.slug %}">
+          <img loading="lazy" src="{{ design.image_url }}" alt="{{ design.title }}">
+        </a>
+        <button class="heart" aria-label="Save {{ design.title }}" data-favorite="{{ design.id }}">♡</button>
+      </div>
+      <div class="product-info">
+        <h3>{{ design.title }}</h3>
+        <p>{{ design.description|truncatewords:6 }}</p>
+        <div class="price">{{ design.price_label }}</div>
+        <span class="tag">{{ design.category.name }}</span>
+      </div>
+    </article>
+    {% empty %}
+    <p>No designs found. Run seed_data to populate.</p>
+    {% endfor %}
+  </div>
+</section>
+
+<section class="panel" style="margin-top:35px">
+  <div class="panel-head">
+    <h3>Your next step</h3>
+    <a class="text-button" href="{% url 'profile' %}">View profile ↗</a>
+  </div>
+  <p>Build your style profile to make future design suggestions more relevant. Add your preferences and measurement details whenever you are ready.</p>
+  <a class="button secondary small" href="{% url 'measurements' %}">Update Measurements</a>
+</section>
+{% endblock content %}

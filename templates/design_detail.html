@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+
+{% block title %}{{ design.title }} | Fitverse AI{% endblock %}
+{% block page_title %}Design details{% endblock %}
+
+{% block content %}
+<div class="detail-layout">
+  <div class="detail-gallery">
+    <img src="{{ design.image_url }}" alt="{{ design.title }}">
+    {% if related_designs %}
+      {% for rel in related_designs %}
+        <img src="{{ rel.image_url }}" alt="{{ rel.title }}">
+      {% endfor %}
+    {% else %}
+      <img src="https://images.unsplash.com/photo-1529139574466-a303027c1d8b?auto=format&fit=crop&w=900&q=85" alt="Styling inspiration">
+      <img src="https://images.unsplash.com/photo-1509631179647-0177331693ae?auto=format&fit=crop&w=900&q=85" alt="Fabric inspiration">
+    {% endif %}
+  </div>
+
+  <section class="detail-copy">
+    <div class="eyebrow">Fitverse collection · {{ design.category.name }}</div>
+    <h1>{{ design.title }}</h1>
+    <div class="detail-price">{{ design.price_label }} <span class="muted" style="font-size:12px;font-weight:400">estimated</span></div>
+    
+    <p class="muted">{{ design.description }}</p>
+    
+    {% if design.styling_advice %}
+      <div class="notice">
+        <strong>Stylist Recommendation:</strong> {{ design.styling_advice }}
+      </div>
+    {% endif %}
+
+    <div class="field">
+      <label>Fabric & Silhouette</label>
+      <p style="font-size:13px; margin:0;"><strong>Fabric:</strong> {{ design.fabric|default:"Tailored Textile" }} &nbsp;|&nbsp; <strong>Silhouette:</strong> {{ design.silhouette|default:"Classic" }}</p>
+    </div>
+
+    <div class="field">
+      <label>Fit preference</label>
+      <select>
+        <option>Regular Balanced</option>
+        <option>Slim / Tailored</option>
+        <option>Relaxed Fit</option>
+        <option>Oversized Traditional</option>
+      </select>
+    </div>
+
+    <div class="actions">
+      <a class="button" href="{% url 'style_intelligence' %}">Try on in FASHN VTON Studio ↗</a>
+      <button class="secondary" data-favorite="{{ design.id }}">♡ Save design</button>
+    </div>
+
+    <div class="profile-list" style="margin-top:25px">
+      <a href="{% url 'measurements' %}"><span>Check my tailoring measurements</span><span>→</span></a>
+      {% if design.source_link %}
+        <a href="{{ design.source_link }}" target="_blank" rel="noopener"><span>View editorial reference link</span><span>↗</span></a>
+      {% endif %}
+    </div>
+  </section>
+</div>
+{% endblock content %}

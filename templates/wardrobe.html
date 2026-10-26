@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+
+{% block title %}My Wardrobe | Fitverse AI{% endblock %}
+{% block page_title %}My wardrobe{% endblock %}
+
+{% block content %}
+<div class="section-head">
+  <div>
+    <div class="eyebrow">Your personal collection</div>
+    <h2>Keep the looks you love.</h2>
+  </div>
+  <a class="button" href="{% url 'designs' %}">Discover designs ↗</a>
+</div>
+
+<div class="wardrobe-tabs">
+  <button class="active" data-choice onclick="showWardrobeTab('favorites')">Saved favorites ({{ favorites.count }})</button>
+  <button data-choice onclick="showWardrobeTab('looks')">Try-on history ({{ saved_looks.count }})</button>
+</div>
+
+<!-- Favorites Section -->
+<div id="tab-favorites" class="product-grid">
+  {% for fav in favorites %}
+    <article class="product-card" data-category="{{ fav.design.category.slug }}">
+      <div class="product-image">
+        <a href="{% url 'design_detail' fav.design.slug %}">
+          <img loading="lazy" src="{{ fav.design.image_url }}" alt="{{ fav.design.title }}">
+        </a>
+        <button class="heart" aria-label="Remove {{ fav.design.title }}" data-favorite="{{ fav.design.id }}">♥</button>
+      </div>
+      <div class="product-info">
+        <h3>{{ fav.design.title }}</h3>
+        <p>{{ fav.design.fabric|default:"Tailored Native" }}</p>
+        <div class="price">{{ fav.design.price_label }}</div>
+        <span class="tag">{{ fav.design.category.name }}</span>
+      </div>
+    </article>
+  {% empty %}
+    <div class="empty-state" style="grid-column: 1 / -1;">
+      <h3>Your wardrobe is empty</h3>
+      <p>Save items with the ♡ button in <a href="{% url 'designs' %}" style="text-decoration:underline;">Discover Designs</a> or via the AI Stylist.</p>
+    </div>
+  {% endfor %}
+</div>
+
+<!-- Saved Looks History -->
+<div id="tab-looks" class="product-grid" style="display:none;">
+  {% for look in saved_looks %}
+    <article class="product-card">
+      <div class="product-image">
+        <img loading="lazy" src="{{ look.image_url }}" alt="{{ look.title }}">
+      </div>
+      <div class="product-info">
+        <h3>{{ look.title }}</h3>
+        <p>Saved on {{ look.created_at|date:"M d, Y" }}</p>
+        <span class="tag">Virtual Try-On</span>
+      </div>
+    </article>
+  {% empty %}
+    <div class="empty-state" style="grid-column: 1 / -1;">
+      <h3>No try-on history yet</h3>
+      <p>Generate a virtual try-on in the <a href="{% url 'style_intelligence' %}" style="text-decoration:underline;">Style Intelligence Studio</a> to save looks here.</p>
+    </div>
+  {% endfor %}
+</div>
+{% endblock content %}
+
+{% block extra_scripts %}
+<script>
+function showWardrobeTab(tab){
+  const favEl = document.getElementById('tab-favorites');
+  const looksEl = document.getElementById('tab-looks');
+  if(tab === 'favorites'){
+    favEl.style.display = 'grid';
+    looksEl.style.display = 'none';
+  } else {
+    favEl.style.display = 'none';
+    looksEl.style.display = 'grid';
+  }
+}
+</script>
+{% endblock %}

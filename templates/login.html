@@ -1,0 +1,59 @@
+{% load static %}
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Welcome back | Fitverse AI</title>
+  <link rel="stylesheet" href="{% static 'assets/styles.css' %}">
+</head>
+<body>
+  <main class="auth-layout">
+    <section class="auth-visual">
+      <img src="https://images.unsplash.com/photo-1483985988355-763728e1935b?auto=format&fit=crop&w=900&q=85" alt="Fashion editorial">
+      <div class="auth-caption">
+        <div class="eyebrow" style="color:#f2dbe8">Fitverse AI</div>
+        <h2>Your style.<br>Your point of view.</h2>
+        <p>Discover, experiment, and make every look your own.</p>
+      </div>
+    </section>
+
+    <section class="auth-content">
+      <form class="auth-form" method="POST" action="{% url 'login' %}">
+        {% csrf_token %}
+        <a class="logo" href="{% url 'home' %}">Fitverse<span> AI</span></a>
+        <h1>Welcome back</h1>
+        <p>Log in to continue exploring your style.</p>
+
+        {% if error %}
+          <div class="notice" style="background:#fde8e8;border-color:#e02424;color:#9b1c1c;">
+            {{ error }}
+          </div>
+        {% endif %}
+
+        <div class="field">
+          <label for="email">Email address</label>
+          <input id="email" name="email" type="email" placeholder="you@example.com" required>
+        </div>
+
+        <div class="field">
+          <label for="password">Password</label>
+          <input id="password" name="password" type="password" placeholder="At least 6 characters" required>
+        </div>
+
+        <a class="text-button" href="{% url 'forgot_password' %}" style="float:right;font-size:12px">Forgot password?</a>
+        <button class="full" type="submit">Sign In</button>
+
+        <p style="text-align:center;margin-top:25px;font-size:13px">
+          New to Fitverse? <a href="{% url 'signup' %}" style="color:var(--plum);font-weight:700">Create an account</a>
+        </p>
+        <p style="font-size:11px;text-align:center;margin-top:25px">
+          <a href="{% url 'home' %}">← Back to Fitverse</a>
+        </p>
+      </form>
+    </section>
+  </main>
+  <div id="toast" class="toast"></div>
+  <script src="{% static 'assets/app.js' %}"></script>
+</body>
+</html>

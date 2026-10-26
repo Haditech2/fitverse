@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+
+{% block title %}My Measurements | Fitverse AI{% endblock %}
+{% block page_title %}My measurements{% endblock %}
+
+{% block content %}
+<div class="section-head">
+  <div>
+    <div class="eyebrow">Your tailoring profile</div>
+    <h2>Know your measurements.</h2>
+  </div>
+  <p>Keep your measurements organized for bespoke tailoring and virtual fitting. Measurements are automatically synced with your profile.</p>
+</div>
+
+<div class="segmented">
+  <button class="active" data-unit="cm" onclick="switchUnit('cm')">Centimetres</button>
+  <button data-unit="in" onclick="switchUnit('in')">Inches</button>
+</div>
+
+<div class="measurement-layout">
+  <section class="body-illustration">
+    <div>
+      <div class="silhouette">♙</div>
+      <h3>Your measurement guide</h3>
+      <p>Use the form to record measurements taken with a flexible measuring tape. Keep the tape level and comfortably snug.</p>
+      <span class="tag">Django Database Connected</span>
+    </div>
+  </section>
+
+  <section class="panel">
+    <div class="panel-head">
+      <h3>Body measurements</h3>
+      <span class="tag">Editable profile</span>
+    </div>
+
+    <div class="measurement-grid">
+      <div class="field">
+        <label>Chest / bust (<span data-unit-label>cm</span>)</label>
+        <input data-measure="chest" data-cm="{{ measurements.chest|default:96 }}" type="number" step="0.5" min="0" value="{{ measurements.chest|default:96 }}">
+      </div>
+      <div class="field">
+        <label>Waist (<span data-unit-label>cm</span>)</label>
+        <input data-measure="waist" data-cm="{{ measurements.waist|default:82 }}" type="number" step="0.5" min="0" value="{{ measurements.waist|default:82 }}">
+      </div>
+      <div class="field">
+        <label>Hips (<span data-unit-label>cm</span>)</label>
+        <input data-measure="hips" data-cm="{{ measurements.hips|default:100 }}" type="number" step="0.5" min="0" value="{{ measurements.hips|default:100 }}">
+      </div>
+      <div class="field">
+        <label>Shoulder width (<span data-unit-label>cm</span>)</label>
+        <input data-measure="shoulder" data-cm="{{ measurements.shoulder|default:46 }}" type="number" step="0.5" min="0" value="{{ measurements.shoulder|default:46 }}">
+      </div>
+      <div class="field">
+        <label>Sleeve length (<span data-unit-label>cm</span>)</label>
+        <input data-measure="sleeve" data-cm="{{ measurements.sleeve|default:64 }}" type="number" step="0.5" min="0" value="{{ measurements.sleeve|default:64 }}">
+      </div>
+      <div class="field">
+        <label>Inseam (<span data-unit-label>cm</span>)</label>
+        <input data-measure="inseam" data-cm="{{ measurements.inseam|default:81 }}" type="number" step="0.5" min="0" value="{{ measurements.inseam|default:81 }}">
+      </div>
+      <div class="field">
+        <label>Neck (<span data-unit-label>cm</span>)</label>
+        <input data-measure="neck" data-cm="{{ measurements.neck|default:39 }}" type="number" step="0.5" min="0" value="{{ measurements.neck|default:39 }}">
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Preferred fit</label>
+      <div class="choice-grid" style="grid-template-columns:repeat(4,1fr)">
+        <button class="choice" data-choice><strong>Slim</strong></button>
+        <button class="choice active" data-choice><strong>Regular</strong></button>
+        <button class="choice" data-choice><strong>Relaxed</strong></button>
+        <button class="choice" data-choice><strong>Oversized</strong></button>
+      </div>
+    </div>
+
+    <div class="notice">
+      Saved measurements inform your tailoring brief and FASHN VTON 1.5 silhouette calculations.
+    </div>
+
+    <button type="button" onclick="saveMeasurements()">Save measurements</button>
+  </section>
+</div>
+{% endblock content %}
