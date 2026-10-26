@@ -6,3 +6,137 @@
 
 /* Fashion-source additions */
 .image-credit{position:absolute;left:10px;bottom:10px;background:rgba(255,255,255,.94);color:#34232d;font-size:10px;padding:5px 8px;border-radius:3px;z-index:2}.product-image{position:relative}.source-link{font-size:12px;margin-top:8px}.source-link a{color:#7b365a;text-decoration:underline;text-underline-offset:3px}.product-card .tag{margin-top:8px}
+
+/* =========================================================
+   STYLE INTELLIGENCE & FASHN VTON 1.5 SPLIT STUDIO
+   ========================================================= */
+
+.mobile-studio-switch{display:none;gap:8px;margin-bottom:16px}
+.mobile-studio-switch button{flex:1;background:var(--white);color:var(--muted);border:1px solid var(--line);padding:10px 14px;font-size:13px;border-radius:4px;font-weight:600}
+.mobile-studio-switch button.active{background:var(--plum);color:white;border-color:var(--plum)}
+
+.split-studio{display:grid;grid-template-columns:minmax(0,1.08fr) minmax(380px,.92fr);gap:22px;align-items:start}
+
+/* Chat Window */
+.studio-chat{min-height:720px;display:flex;flex-direction:column}
+.stylist-badge{display:flex;align-items:center;gap:12px}
+.status-dot{width:10px;height:10px;border-radius:50%;background:#10b981;box-shadow:0 0 0 3px rgba(16,185,129,.2);display:inline-block;animation:pulse-green 2s infinite}
+@keyframes pulse-green{0%,100%{box-shadow:0 0 0 2px rgba(16,185,129,.25)}50%{box-shadow:0 0 0 5px rgba(16,185,129,.45)}}
+.muted-badge{font-size:12px;color:var(--muted);display:block}
+.tool-btn{background:transparent;color:var(--muted);border:1px solid var(--line);padding:6px 11px;font-size:12px;border-radius:3px;transition:.2s}
+.tool-btn:hover{color:var(--plum);border-color:var(--plum);background:#fbf6f9}
+
+/* Brief Strip */
+.brief-strip{display:flex;flex-wrap:wrap;gap:12px;padding:12px 14px;background:#f7efe7;border:1px solid var(--line);margin-bottom:14px;border-radius:4px;font-size:12px}
+.brief-item{display:flex;align-items:center;gap:8px;flex:1;min-width:140px}
+.brief-item label{font-weight:700;color:#5a4f47;white-space:nowrap}
+.brief-item select{padding:5px 8px;font-size:12px;border:1px solid var(--line);background:var(--white);border-radius:3px;width:100%}
+.brief-item input[type="range"]{flex:1;accent-color:var(--plum)}
+.brief-budget-val{font-weight:700;color:var(--plum);min-width:65px;text-align:right}
+
+/* Chat Messages */
+.chat-messages{flex:1;display:flex;flex-direction:column;gap:16px;padding:10px 4px 18px;max-height:460px;overflow-y:auto;scroll-behavior:smooth}
+.message{max-width:88%;padding:14px 16px;background:#f4ede6;border-radius:6px;font-size:14px;line-height:1.5;color:var(--ink);animation:fadeIn .25s ease-out}
+.message.user{align-self:flex-end;background:var(--plum);color:white;border-bottom-right-radius:1px}
+.message.user p{color:white}
+.message-author{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--plum);margin-bottom:5px}
+@keyframes fadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+
+/* Curated Look Card in Chat */
+.look-card{margin-top:12px;background:var(--white);border:1px solid var(--line);border-radius:6px;overflow:hidden;display:flex;gap:14px;padding:12px;transition:border-color .2s,box-shadow .2s}
+.look-card:hover{border-color:#b18ba4;box-shadow:0 4px 14px rgba(84,38,66,.08)}
+.look-thumb{width:105px;height:115px;border-radius:4px;object-fit:cover;background:#ede2d6;flex-shrink:0}
+.look-info{flex:1;display:flex;flex-direction:column;justify-content:space-between}
+.look-title-row{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
+.look-title{font-weight:700;font-size:14px;color:var(--ink);margin:0}
+.look-desc{font-size:12px;color:var(--muted);margin:4px 0 6px;line-height:1.4}
+.look-meta{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px}
+.look-meta .tag{font-size:10px;padding:2px 6px;margin:0;background:#f1e6ee;color:var(--plum)}
+.look-actions{display:flex;align-items:center;gap:8px}
+.btn-tryon-card{background:var(--plum);color:white;border:none;padding:7px 12px;font-size:12px;font-weight:600;border-radius:4px;display:inline-flex;align-items:center;gap:5px;cursor:pointer;transition:.2s}
+.btn-tryon-card:hover{background:var(--plum2);transform:translateY(-1px)}
+.btn-save-look-card{background:transparent;border:1px solid var(--line);color:var(--ink);padding:6px 9px;font-size:12px;border-radius:4px;cursor:pointer}
+.btn-save-look-card:hover{border-color:var(--plum);color:var(--plum)}
+
+/* Typing Indicator */
+.typing-bubble{align-self:flex-start;padding:12px 16px;background:#f4ede6;border-radius:6px;display:inline-flex;gap:4px;align-items:center}
+.typing-bubble span{width:6px;height:6px;background:var(--muted);border-radius:50%;animation:typing 1.2s infinite ease-in-out}
+.typing-bubble span:nth-child(2){animation-delay:.2s}
+.typing-bubble span:nth-child(3){animation-delay:.4s}
+@keyframes typing{0%,80%,100%{transform:scale(0.6);opacity:0.4}40%{transform:scale(1.1);opacity:1}}
+
+/* Suggestions & Chat Form */
+.suggestions{display:flex;gap:7px;flex-wrap:wrap;margin:10px 0 14px}
+.suggestion{background:var(--white);border:1px solid var(--line);color:var(--ink);font-size:12px;padding:7px 11px;border-radius:3px;cursor:pointer;transition:.2s}
+.suggestion:hover{border-color:var(--plum);color:var(--plum);background:#fcf8fa}
+
+/* =========================================================
+   RIGHT SIDE: FASHN VTON 1.5 STUDIO
+   ========================================================= */
+.studio-tryon{min-height:720px;display:flex;flex-direction:column}
+.studio-vton-head{border-bottom:1px solid var(--line);padding-bottom:14px;margin-bottom:16px}
+.vton-title-group{display:flex;align-items:center;gap:10px}
+.vton-logo-badge{display:flex;align-items:center;gap:10px}
+.vton-icon{width:32px;height:32px;background:#542642;color:white;border-radius:50%;display:grid;place-items:center;font-size:16px}
+.vton-sub{font-size:11px;color:var(--muted);display:block}
+.vton-tabs{display:flex;gap:6px;background:#f2e9e1;padding:3px;border-radius:4px}
+.vton-tab-btn{background:transparent;color:var(--muted);border:none;padding:6px 11px;font-size:12px;font-weight:600;border-radius:3px;cursor:pointer;transition:.15s}
+.vton-tab-btn.active{background:var(--white);color:var(--plum);box-shadow:0 2px 5px rgba(0,0,0,.06)}
+
+/* Active Garment Box */
+.active-garment-card{background:#fbf7f2;border:2px solid #e1d3c5;border-radius:6px;padding:12px;margin-bottom:16px;transition:all .3s ease}
+.active-garment-card.highlight{border-color:var(--plum);box-shadow:0 0 0 3px rgba(84,38,66,.15);background:#fbf1f7}
+.ag-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.pill-label{font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--plum)}
+.garment-category-pill{font-size:11px;background:var(--white);border:1px solid var(--line);padding:2px 7px;border-radius:3px;font-weight:600}
+.ag-body{display:flex;gap:12px;align-items:center}
+.ag-img-wrap{width:75px;height:80px;border-radius:4px;overflow:hidden;background:#ece0d3;flex-shrink:0}
+.ag-img-wrap img{width:100%;height:100%;object-fit:cover}
+.ag-details h4{margin:0 0 3px;font-size:14px;font-weight:700}
+.ag-details p{margin:0 0 6px;font-size:12px;color:var(--muted)}
+.ag-meta{display:flex;align-items:center;gap:8px}
+
+/* Model Selector */
+.vton-model-section{margin-bottom:14px}
+.vton-section-title{display:flex;justify-content:space-between;align-items:center;font-size:12px;font-weight:700;color:#554942;margin-bottom:8px}
+.custom-upload-btn{color:var(--plum);cursor:pointer;font-size:12px;font-weight:600;text-decoration:underline;text-underline-offset:2px}
+.custom-upload-btn:hover{color:var(--plum2)}
+.model-presets{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.model-thumb{background:var(--white);border:1px solid var(--line);border-radius:4px;padding:4px;cursor:pointer;text-align:center;transition:.2s}
+.model-thumb:hover{border-color:#b18ba4}
+.model-thumb.selected{border:2px solid var(--plum);background:#f7edf3}
+.model-thumb img{width:100%;height:58px;object-fit:cover;border-radius:2px}
+.model-thumb span{display:block;font-size:10px;font-weight:600;color:var(--ink);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* Controls row */
+.vton-controls-row{display:grid;grid-template-columns:1.2fr 1fr;gap:10px;margin-bottom:14px}
+.control-group label{font-size:11px;font-weight:700;display:block;margin-bottom:4px;color:#5c5049}
+.control-group select{width:100%;padding:7px 9px;font-size:12px;border:1px solid var(--line);background:var(--white);border-radius:3px}
+
+/* Actions */
+.vton-actions{display:flex;gap:10px;margin-bottom:14px}
+.vton-run-btn{flex:1;background:var(--plum);color:white;padding:11px 14px;font-size:13px;font-weight:700;border:none;border-radius:4px}
+.vton-run-btn:hover{background:var(--plum2)}
+
+/* Preview Canvas Stage */
+.tryon-preview-stage{position:relative;background:#231c20;border-radius:6px;overflow:hidden;min-height:360px;max-height:420px;display:grid;place-items:center}
+.tryon-preview-stage img{width:100%;height:380px;object-fit:cover;display:block;transition:opacity .3s}
+.result-badge{position:absolute;top:12px;left:12px;background:rgba(40,34,31,.85);color:white;padding:4px 9px;font-size:11px;border-radius:3px;backdrop-filter:blur(4px)}
+.preview-overlay{position:absolute;inset:0;background:rgba(35,28,32,.88);color:white;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:20px;text-align:center;z-index:10;backdrop-filter:blur(4px)}
+.spinner{width:38px;height:38px;border:3px solid rgba(255,255,255,.2);border-top-color:#f7b0dc;border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.sub-loader{font-size:11px;color:#d1c1ca;max-width:280px}
+.result-toolbar{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;justify-content:space-between}
+
+/* Live Iframe View */
+.live-space-info{display:flex;justify-content:space-between;align-items:center;font-size:12px;padding:8px 12px;background:#f1e7df;border:1px solid var(--line);border-radius:4px;margin-bottom:12px}
+.live-space-info a{color:var(--plum);font-weight:700;text-decoration:underline}
+.iframe-container{width:100%;border-radius:6px;overflow:hidden;border:1px solid var(--line);background:white}
+.iframe-container iframe{border:none;width:100%;height:680px}
+
+@media(max-width:1050px){
+  .split-studio{grid-template-columns:1fr}
+  .mobile-studio-switch{display:flex}
+  .studio-chat,.studio-tryon{min-height:auto}
+}
+

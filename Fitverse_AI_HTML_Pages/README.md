@@ -15,9 +15,15 @@ A multi-page, responsive HTML/CSS/JavaScript prototype for Fitverse AI.
 - `designs.html`, `design-detail.html` — fashion catalogue and design detail
 - `tryon.html` — virtual try-on workflow
 - `measurements.html` — measurement profile
-- `style-intelligence.html` — stylist chat UI
+- `style-intelligence.html` — AI personal stylist chat with FASHN VTON 1.5 virtual try-on split studio
 - `wardrobe.html` — saved looks
 - `profile.html` — profile and privacy settings
+
+## FASHN VTON 1.5 Integration
+The Style Intelligence workspace integrates an interactive split studio featuring [FASHN VTON v1.5](https://huggingface.co/spaces/fashn-ai/fashn-vton-1.5):
+- **Conversational AI Stylist**: Guides users on Senator wear, Ankara prints, wedding/Owambe guest styling, corporate attire, and color harmony.
+- **1-Click Studio Transfer**: Any recommended look card in the chat can be transferred directly into the fitting studio with `⚡ Try On in Studio`.
+- **Fitting Canvas & Live Space**: Test outfits on male/female models or uploaded photos, with direct embedding of the live Hugging Face Space for full MMDiT pixel-space virtual try-on.
 
 ## Important prototype limitations
 This is frontend-only. Login, Google sign-in, password reset, server-side saving, real AI virtual try-on, automatic body measurement estimation, and AI stylist responses require backend services and/or external APIs. The current forms display demo feedback rather than contacting a server. Sample prices, measurements, and product content are placeholders. Images are loaded from Unsplash URLs and therefore require an internet connection.
