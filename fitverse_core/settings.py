@@ -7,6 +7,22 @@ import os
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+def _load_local_env():
+    env_path = BASE_DIR / '.env'
+    if not env_path.is_file():
+        return
+    for raw_line in env_path.read_text(encoding='utf-8').splitlines():
+        line = raw_line.strip()
+        if not line or line.startswith('#') or '=' not in line:
+            continue
+        name, value = line.split('=', 1)
+        name = name.strip()
+        value = value.strip().strip('"').strip("'")
+        if name:
+            os.environ.setdefault(name, value)
+
+_load_local_env()
+
 SECRET_KEY = 'django-insecure-gtu+k2%%x=3)wlzkaeds9crmkj4cqlg^_t_ixnws0ns%tm3mpj'
 
 DEBUG = True
@@ -95,6 +111,10 @@ FILE_UPLOAD_MAX_MEMORY_SIZE = 12 * 1024 * 1024
 
 FASHN_VTON_SPACE = os.getenv('FASHN_VTON_SPACE', 'fashn-ai/fashn-vton-1.5')
 HF_TOKEN = os.getenv('HF_TOKEN', '')
+GEMINI_API_KEY = os.getenv('GEMINI_API_KEY', '')
+GEMINI_TEXT_MODEL = os.getenv('GEMINI_TEXT_MODEL', 'gemini-2.5-flash')
+GEMINI_IMAGE_MODEL = os.getenv('GEMINI_IMAGE_MODEL', 'gemini-2.5-flash-image')
+AI_PROVIDER = os.getenv('AI_PROVIDER', 'gemini')
 
 LOGIN_REDIRECT_URL = 'dashboard'
 LOGOUT_REDIRECT_URL = 'home'

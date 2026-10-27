@@ -188,3 +188,54 @@
   .mobile-studio-switch{display:flex}
   .studio-chat,.studio-tryon{min-height:auto}
 }
+
+/* Screenshot-inspired dedicated Try-On landing layout */
+.tryon-page-redesign{max-width:1180px;background:#fff;margin:0 auto;padding:0;overflow:hidden}
+.tryon-redesign-grid{display:grid;grid-template-columns:minmax(430px,.98fr) minmax(420px,1.02fr);min-height:650px}
+.tryon-redesign-copy{padding:42px 38px 28px 0}
+.tryon-redesign-copy h2{font-family:Arial,sans-serif;font-size:clamp(2.1rem,3.8vw,3.35rem);font-weight:700;letter-spacing:-.04em;line-height:1.04;margin:10px 0 16px;color:#070707}
+.tryon-redesign-copy h2 em{font-style:normal}
+.tryon-redesign-copy>p{max-width:500px;color:#46566c;font-size:15px;line-height:1.55;margin-bottom:26px}
+.tryon-redesign-copy .tryon-upload-grid{gap:7px}
+.tryon-redesign-copy .tryon-upload-card{height:282px;border:1px dashed #cbd2dc;border-radius:20px;background:#fff;position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:20px;overflow:hidden;cursor:pointer}
+.tryon-redesign-copy .tryon-upload-card.selected{border:2px solid #111}
+.tryon-redesign-copy .tryon-letter{position:absolute;left:14px;top:14px;width:22px;height:22px;border-radius:50%;background:#050505;color:#fff;font-size:12px;font-weight:700;display:grid;place-items:center}
+.tryon-redesign-copy .tryon-card-icon{font-size:0;margin:0}
+.tryon-redesign-copy .tryon-card-icon:before{content:'↥';font-size:30px;color:#59677a}
+.tryon-redesign-copy .tryon-upload-card strong{font-family:Arial,sans-serif;font-size:17px;color:#0b0b0b;margin-top:30px}
+.tryon-redesign-copy .tryon-upload-card small{color:#7d8794;font-size:12px}
+.tryon-redesign-copy .tryon-upload-card input{display:none}
+.tryon-redesign-copy .tryon-upload-card img{display:none;position:absolute;inset:0;width:100%;height:100%;object-fit:cover;background:#fff}
+.tryon-redesign-copy .tryon-upload-card img[style*="block"]{display:block}
+.tryon-redesign-hint{margin:10px 0;text-align:center;border-radius:28px;padding:13px;background:#e4e6ea;color:#667486}
+.tryon-redesign-hint span{font-size:22px;vertical-align:-2px;margin-right:8px}
+.tryon-redesign-copy .tryon-generate-button{width:100%;border-radius:28px;background:#e4e6ea;color:#667486;padding:15px;font-size:14px}
+.tryon-redesign-copy .tryon-generate-button:hover{background:#d7dae0;color:#222;transform:none}
+.tryon-redesign-copy .tryon-generate-button span{font-size:20px}
+.tryon-trust-row{display:flex;flex-wrap:wrap;gap:12px 20px;border-top:1px solid #dfe3e8;margin-top:28px;padding-top:16px;color:#1c2736;font-size:12px}
+.tryon-catalog{margin-top:22px;padding:16px;display:none}
+.tryon-redesign-art{position:relative;min-height:650px;background:#f6f5f2;border-radius:0 0 28px 28px;overflow:hidden}
+.tryon-art-main{position:absolute;left:11%;top:12px;width:65%;height:570px;border-radius:30px;overflow:hidden;background:#e8e4dc;box-shadow:0 2px 8px #00000012}
+.tryon-art-main>img{width:100%;height:100%;object-fit:cover}
+.tryon-art-label{position:absolute;z-index:2;top:18px;left:20px;border-radius:20px;background:#fff;color:#5e6876;padding:7px 12px;font-size:10px;letter-spacing:.1em;font-weight:700}
+.tryon-redesign-art .tryon-result-copy{position:absolute;z-index:2;left:20px;right:20px;top:45%;text-align:center;display:flex;flex-direction:column;align-items:center;color:#152033}
+.tryon-redesign-art .tryon-result-copy small{color:#59677a;margin-top:7px}
+.tryon-art-card,.tryon-art-garment{position:absolute;z-index:3;overflow:hidden;background:#eee;border:4px solid #fff;border-radius:19px;box-shadow:0 8px 18px #3a302522}
+.tryon-art-card img,.tryon-art-garment img{width:100%;height:100%;object-fit:cover}
+.tryon-art-card-top{right:4%;top:72px;width:28%;height:190px;transform:rotate(-4deg)}
+.tryon-art-card-bottom{right:7%;top:285px;width:27%;height:190px;transform:rotate(5deg)}
+.tryon-art-garment{left:16%;bottom:28px;width:22%;height:135px}
+.tryon-art-garment span{position:absolute;z-index:2;right:-14px;top:45%;width:30px;height:30px;background:#fff;border-radius:50%;display:grid;place-items:center;color:#9a8d7f;font-size:24px}
+@media(max-width:850px){.tryon-redesign-grid{grid-template-columns:1fr}.tryon-redesign-copy{padding:28px 0}.tryon-redesign-art{min-height:520px}.tryon-art-main{height:450px}.tryon-art-card-top{top:50px}.tryon-art-card-bottom{top:245px}}
+@media(max-width:480px){.tryon-redesign-copy .tryon-upload-card{height:220px}.tryon-redesign-art{min-height:400px}.tryon-art-main{left:7%;width:78%;height:360px}.tryon-art-card-top{width:30%;height:130px}.tryon-art-card-bottom{width:28%;height:130px;top:205px}.tryon-art-garment{left:12%;width:27%;height:95px}}
+
+/* Keep the desktop workspace navigation fixed while page content scrolls. */
+@media(min-width:761px){
+  .app-shell{display:block;min-height:100vh}
+  .sidebar{position:fixed;inset:0 auto 0 0;width:225px;height:100vh;overflow-y:auto;z-index:30}
+  .app-main{margin-left:225px;min-height:100vh}
+}
+@media(min-width:761px) and (max-width:1050px){
+  .sidebar{width:190px}
+  .app-main{margin-left:190px}
+}

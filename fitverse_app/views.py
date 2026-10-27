@@ -1,12 +1,14 @@
 import json
 from django.shortcuts import render, get_object_or_404, redirect
 from django.http import JsonResponse
+from django.conf import settings
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.models import User
 from django.db.models import Q
 from .models import Category, Design, UserMeasurement, SavedLook, Favorite, VirtualTryOn
 from .services.fashn_vton import FashnVtonError, generate_try_on
+from .services.gemini_ai import GeminiError, generate_stylist_response, generate_try_on as generate_gemini_try_on
 
 def get_session_key(request):
     if not request.session.session_key:
@@ -230,6 +232,18 @@ def api_stylist_chat(request):
             'stylingAdvice': d.styling_advice,
         })
 
+    if getattr(settings, 'AI_PROVIDER', 'gemini') == 'gemini' and getattr(settings, 'GEMINI_API_KEY', ''):
+        try:
+            advice, looks = generate_stylist_response(
+                message=data.get('message', '').strip(),
+                occasion=occasion,
+                style=style_direction,
+                budget=budget,
+                catalog=looks,
+            )
+        except GeminiError as exc:
+            return JsonResponse({'error': str(exc)}, status=503)
+
     return JsonResponse({
         'advice': advice,
         'looks': looks,
@@ -264,17 +278,24 @@ def api_vton_tryon(request):
         return JsonResponse({'error': 'Select a garment before generating a try-on.'}, status=400)
 
     try:
-        result_image = generate_try_on(
-            person_image=person_image,
-            garment_image=garment_image,
-            category=category,
-            garment_photo_type=request.POST.get('garment_photo_type', 'model'),
-            num_timesteps=30,
-            guidance_scale=1.5,
-            seed=42,
-            segmentation_free=True,
-        )
-    except FashnVtonError as exc:
+        if getattr(settings, 'AI_PROVIDER', 'gemini') == 'gemini' and getattr(settings, 'GEMINI_API_KEY', ''):
+            result_image = generate_gemini_try_on(
+                person_image=person_image,
+                garment_image=garment_image,
+                category=category,
+            )
+        else:
+            result_image = generate_try_on(
+                person_image=person_image,
+                garment_image=garment_image,
+                category=category,
+                garment_photo_type=request.POST.get('garment_photo_type', 'model'),
+                num_timesteps=30,
+                guidance_scale=1.5,
+                seed=42,
+                segmentation_free=True,
+            )
+    except (FashnVtonError, GeminiError) as exc:
         return JsonResponse({'error': str(exc)}, status=503)
 
     tryon = VirtualTryOn.objects.create(

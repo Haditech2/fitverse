@@ -22,6 +22,21 @@ python -m venv .venv
 python -m pip install -r requirements.txt
 ```
 
+### Configure Gemini safely
+
+Copy `.env.example` to `.env`, then open `.env` and paste your Gemini key after
+`GEMINI_API_KEY=`. The `.env` file is ignored by Git and the key is only read
+by the Django server; it is never sent to the browser.
+
+```powershell
+Copy-Item .env.example .env
+notepad .env
+```
+
+Keep the key blank until you have created one at
+[Google AI Studio](https://aistudio.google.com/apikey). Restart Django after
+changing `.env`.
+
 The first try-on request uses the public Hugging Face Space
 `fashn-ai/fashn-vton-1.5`. If the Space requires authentication, set
 `HF_TOKEN` in the environment. The token stays server-side and is never sent
