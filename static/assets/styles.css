@@ -84,9 +84,9 @@
 .bodygram-photo-actions{margin-left:auto;display:grid;gap:4px;justify-items:end}
 .bodygram-photo-actions small{font-size:11px;color:#8a7c82}
 .bodygram-photo-actions .text-button{font-size:12px}
-.bodygram-visuals{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,.85fr);gap:16px;margin:0 0 16px}
+.bodygram-visuals{display:grid;grid-template-columns:minmax(0,1fr);gap:16px;margin:0 0 16px}
 .bodygram-visuals[hidden]{display:none}
-.bodygram-avatar,.bodygram-posture{border:1px solid #e9d8e1;border-radius:10px;background:#fdf9fb;padding:12px}
+.bodygram-avatar{border:1px solid #e9d8e1;border-radius:10px;background:#fdf9fb;padding:12px}
 .bodygram-visual-head{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:8px}
 .bodygram-visual-head h4{margin:0;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--plum)}
 .bodygram-visual-note{font-size:10px;color:#8a7c82}
@@ -110,11 +110,23 @@
 .bodygram-band-label span{font-size:9px;letter-spacing:.05em;text-transform:uppercase;color:#8a7c82}
 .bodygram-band-label strong{font-size:12px;color:#3b2f34;font-variant-numeric:tabular-nums}
 .bodygram-visual-hint{display:block;margin-top:6px;font-size:10px;color:#8a7c82}
-.bodygram-posture-rows{display:grid;gap:6px}
-.bodygram-posture-row{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:7px 9px;border-radius:7px;background:#fff;border:1px solid #f0e3ea;font-size:12px}
-.bodygram-posture-row strong{font-variant-numeric:tabular-nums;color:#3b2f34}
-.bodygram-posture-row small{display:block;font-size:10px;color:#8a7c82}
-@media (max-width:760px){.bodygram-visuals{grid-template-columns:1fr}.bodygram-avatar-stage{height:300px}}
+.bodygram-posture{margin:0 0 16px;padding:16px;border:1px solid #e9d8e1;border-radius:12px;background:#fdf9fb}
+.bodygram-posture[hidden]{display:none}
+.bodygram-posture-head{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap;margin-bottom:14px}
+.bodygram-posture-head h4{margin:4px 0 0;font-size:18px;letter-spacing:-.01em}
+.bodygram-posture-rows{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px}
+.bodygram-posture-row{display:grid;gap:4px;padding:11px 12px;border-radius:9px;background:#fff;border:1px solid #f0e3ea}
+.bodygram-posture-row-head{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.bodygram-posture-label{font-size:11px;letter-spacing:.04em;text-transform:uppercase;color:#8a7c82}
+.bodygram-posture-row strong{font-size:22px;font-weight:600;color:#3b2f34;font-variant-numeric:tabular-nums}
+.bodygram-posture-row small{font-size:10px;color:#8a7c82}
+.bodygram-posture-badge{font-size:9px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:2px 6px;border-radius:999px;border:1px solid transparent}
+.bodygram-posture-badge.is-balanced{background:#e8f4ee;color:#2f6d4f;border-color:#cfe6da}
+.bodygram-posture-badge.is-slight{background:#fdf1e3;color:#8a5a1f;border-color:#f0dcc0}
+.bodygram-posture-badge.is-pronounced{background:#f8e7e7;color:#8f2f2f;border-color:#efd0d0}
+.bodygram-posture-summary{margin:10px 0 0;font-size:12px;color:#5c4c53}
+.bodygram-posture-summary:empty{display:none}
+@media (max-width:760px){.bodygram-avatar-stage{height:300px}.bodygram-posture-rows{grid-template-columns:repeat(auto-fit,minmax(128px,1fr))}}
 .tryon-result-column{min-width:0}
 .tryon-result-header{display:flex;justify-content:space-between;align-items:start;margin-bottom:13px}
 .tryon-result-header h3{margin:4px 0 0;font-size:22px}

@@ -426,6 +426,7 @@ class BodygramEndpointTests(TestCase):
         self.assertContains(response, "bodygram-all")
         self.assertContains(response, "bodygram-cards")
         self.assertContains(response, "bodygram-visuals")
+        self.assertContains(response, "bodygram-posture")
         self.assertContains(response, "scan_saved")
         self.assertContains(response, "shoulder")
         self.assertContains(response, "height_cm")

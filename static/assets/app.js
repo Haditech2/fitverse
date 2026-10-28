@@ -361,6 +361,13 @@ function formatPostureAngle(value){
   return `${rounded > 0 ? '+' : ''}${rounded.toFixed(1)}°`;
 }
 
+function postureTier(value){
+  const abs = Math.abs(value);
+  if(abs < 3) return { tone: 'balanced', badgeLabel: 'Balanced' };
+  if(abs < 7) return { tone: 'slight', badgeLabel: 'Slight' };
+  return { tone: 'pronounced', badgeLabel: 'Pronounced' };
+}
+
 function postureReading(posture){
   const rows = [];
   const front = {};
@@ -369,40 +376,64 @@ function postureReading(posture){
   });
   BODYGRAM_POSTURE_ROWS.forEach(row => {
     if(Number.isFinite(front[row.key])){
-      rows.push({ label: row.label, view: row.view, value: front[row.key] });
+      const value = front[row.key];
+      rows.push({ label: row.label, view: row.view, value, ...postureTier(value) });
     }
   });
 
   const bodyLine = (posture?.right?.angles || [])
     .find(entry => entry && entry.name === 'bodyLine')?.angles || [];
-  if(Number.isFinite(bodyLine[2])) rows.push({ label: 'Back lean', view: 'Right view', value: bodyLine[2] });
-  if(Number.isFinite(bodyLine[3])) rows.push({ label: 'Neck lean', view: 'Right view', value: bodyLine[3] });
+  if(Number.isFinite(bodyLine[2])){
+    const value = bodyLine[2];
+    rows.push({ label: 'Back lean', view: 'Right view', value, ...postureTier(value) });
+  }
+  if(Number.isFinite(bodyLine[3])){
+    const value = bodyLine[3];
+    rows.push({ label: 'Neck lean', view: 'Right view', value, ...postureTier(value) });
+  }
   return rows;
+}
+
+function postureSummary(rows){
+  const slight = rows.filter(row => row.tone === 'slight').length;
+  const pronounced = rows.filter(row => row.tone === 'pronounced').length;
+  if(pronounced) return `${pronounced} of ${rows.length} lines lean noticeably — bring this reading to a fitting.`;
+  if(slight) return `${slight} of ${rows.length} lines lean slightly; the rest are balanced.`;
+  return `All ${rows.length} lines are within 3° of upright.`;
 }
 
 function renderPosture(posture){
   const host = $('#bodygram-posture-rows');
-  const section = $('#bodygram-visuals');
-  if(!host) return;
+  const section = $('#bodygram-posture');
+  const summary = $('#bodygram-posture-summary');
+  if(!host || !section) return;
   const rows = postureReading(posture);
   host.innerHTML = '';
+  if(summary) summary.textContent = '';
+  section.hidden = !rows.length;
   if(!rows.length){
     return;
   }
   rows.forEach(row => {
     const item = document.createElement('div');
     item.className = 'bodygram-posture-row';
+    const head = document.createElement('div');
+    head.className = 'bodygram-posture-row-head';
     const label = document.createElement('span');
+    label.className = 'bodygram-posture-label';
     label.textContent = row.label;
-    const note = document.createElement('small');
-    note.textContent = row.view;
-    label.append(note);
+    const badge = document.createElement('span');
+    badge.className = `bodygram-posture-badge is-${row.tone}`;
+    badge.textContent = row.badgeLabel;
+    head.append(label, badge);
     const value = document.createElement('strong');
     value.textContent = formatPostureAngle(row.value);
-    item.append(label, value);
+    const view = document.createElement('small');
+    view.textContent = row.view;
+    item.append(head, value, view);
     host.append(item);
   });
-  if(section) section.hidden = false;
+  if(summary) summary.textContent = postureSummary(rows);
 }
 
 function renderBodygramPhotos(frontUrl, rightUrl){
