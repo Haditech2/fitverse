@@ -112,9 +112,13 @@ FILE_UPLOAD_MAX_MEMORY_SIZE = 12 * 1024 * 1024
 FASHN_VTON_SPACE = os.getenv('FASHN_VTON_SPACE', 'fashn-ai/fashn-vton-1.5')
 HF_TOKEN = os.getenv('HF_TOKEN', '')
 GEMINI_API_KEY = os.getenv('GEMINI_API_KEY', '')
-GEMINI_TEXT_MODEL = os.getenv('GEMINI_TEXT_MODEL', 'gemini-2.5-flash')
-GEMINI_IMAGE_MODEL = os.getenv('GEMINI_IMAGE_MODEL', 'gemini-2.5-flash-image')
+GEMINI_TEXT_MODEL = os.getenv('GEMINI_TEXT_MODEL', 'gemini-3.8-flash')
+GEMINI_IMAGE_MODEL = os.getenv('GEMINI_IMAGE_MODEL', 'gemini-3.1-flash-image')
 AI_PROVIDER = os.getenv('AI_PROVIDER', 'gemini')
+
+BODYGRAM_ORG_ID = os.getenv('BODYGRAM_ORG_ID', '')
+BODYGRAM_API_KEY = os.getenv('BODYGRAM_API_KEY', '')
+BODYGRAM_API_URL = os.getenv('BODYGRAM_API_URL', 'https://platform.bodygram.com/api/orgs')
 
 LOGIN_REDIRECT_URL = 'dashboard'
 LOGOUT_REDIRECT_URL = 'home'

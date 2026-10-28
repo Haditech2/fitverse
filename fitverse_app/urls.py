@@ -24,6 +24,8 @@ urlpatterns = [
     path('api/stylist/chat/', views.api_stylist_chat, name='api_stylist_chat'),
     path('api/vton/tryon/', views.api_vton_tryon, name='api_vton_tryon'),
     path('api/measurements/save/', views.api_save_measurements, name='api_save_measurements'),
+    path('api/measurements/bodygram/', views.api_bodygram_measurements, name='api_bodygram_measurements'),
+    path('api/measurements/bodygram/photos/delete/', views.api_bodygram_delete_photos, name='api_bodygram_delete_photos'),
     path('api/favorite/toggle/', views.api_toggle_favorite, name='api_toggle_favorite'),
     path('api/looks/save/', views.api_save_look, name='api_save_look'),
 ]

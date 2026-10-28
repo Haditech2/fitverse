@@ -171,6 +171,640 @@ function loadMeasurements(){
   });
 }
 
+/* Bodygram photo-based measurement estimation */
+function previewBodygramPhoto(input, target){
+  const file = input.files?.[0];
+  if(!file) return;
+  if(!file.type.startsWith('image/')){
+    toast('Please choose an image file.');
+    return;
+  }
+  if(file.size > 12 * 1024 * 1024){
+    toast('Choose an image smaller than 12 MB.');
+    return;
+  }
+  const img = $(target);
+  if(img){
+    img.src = URL.createObjectURL(file);
+    img.style.display = 'block';
+  }
+  input.closest('.bodygram-photo')?.classList.add('is-selected');
+}
+
+function setBodygramStatus(message, kind){
+  const status = $('#bodygram-status');
+  if(!status) return;
+  status.textContent = message;
+  status.className = 'tryon-status' + (kind ? ' is-' + kind : '');
+  status.style.display = message ? 'block' : 'none';
+}
+
+const BODYGRAM_COMPOSITION_LABELS = {
+  bodyFatPercentage: 'Body fat',
+  bodyFatMass: 'Body fat mass',
+  leanMass: 'Lean mass',
+  skeletalMuscleMass: 'Skeletal muscle mass',
+  muscleMass: 'Muscle mass',
+  fatMass: 'Fat mass',
+  bodyWater: 'Body water',
+  visceralFat: 'Visceral fat',
+  basalMetabolicRate: 'Basal metabolic rate',
+};
+
+const BODYGRAM_GROUP_ORDER = ['Circumferences', 'Widths & depths', 'Lengths', 'Heights', 'Other'];
+
+function bodygramCompositionLabel(key){
+  if(BODYGRAM_COMPOSITION_LABELS[key]) return BODYGRAM_COMPOSITION_LABELS[key];
+  return key
+    .replace(/([A-Z])/g, ' $1')
+    .replace(/^./, c => c.toUpperCase())
+    .trim();
+}
+
+/* Bodygram returns percentages as bare numbers and masses in grams; the docs
+   sample wraps values as { value, unit }. Support both shapes. */
+function bodygramCompositionValue(key, raw){
+  if(raw && typeof raw === 'object' && raw.value !== undefined){
+    return `${raw.value}${raw.unit ? ' ' + raw.unit : ''}`;
+  }
+  if(typeof raw !== 'number' || !Number.isFinite(raw)) return null;
+  if(key === 'bodyFatPercentage') return `${raw.toFixed(1)}%`;
+  if(/Mass$/.test(key)) return `${(raw / 1000).toFixed(1)} kg`;
+  return String(raw);
+}
+
+function clearBodygramResult(){
+  ['#bodygram-composition', '#bodygram-all', '#bodygram-visuals', '#bodygram-saved-photos'].forEach(selector => {
+    const el = $(selector);
+    if(el){
+      if(selector === '#bodygram-composition') el.innerHTML = '';
+      el.hidden = true;
+    }
+  });
+  const groups = $('#bodygram-all-groups');
+  if(groups) groups.innerHTML = '';
+  const postureRows = $('#bodygram-posture-rows');
+  if(postureRows) postureRows.innerHTML = '';
+  if(window.BodygramAvatar) window.BodygramAvatar.destroy();
+  try { localStorage.removeItem('fitverse-bodygram-result'); } catch(e){}
+}
+
+function renderBodyComposition(composition, scanId, scannedAt){
+  const host = $('#bodygram-composition');
+  if(!host) return;
+  const entries = Object.entries(composition || {})
+    .map(([key, raw]) => [bodygramCompositionLabel(key), bodygramCompositionValue(key, raw)])
+    .filter(([, value]) => value !== null && value !== '');
+
+  if(!entries.length){
+    host.innerHTML = '';
+    host.hidden = true;
+  } else {
+    host.innerHTML = '';
+    entries.forEach(([label, value]) => {
+      const chip = document.createElement('span');
+      chip.className = 'bodygram-chip';
+      const name = document.createElement('span');
+      name.textContent = label;
+      const amount = document.createElement('strong');
+      amount.textContent = value;
+      chip.append(name, amount);
+      host.append(chip);
+    });
+
+    if(scanId){
+      const note = document.createElement('small');
+      note.className = 'bodygram-scan-id';
+      note.textContent = `Bodygram scan ${scanId}${scannedAt ? ' · ' + scannedAt : ''}`;
+      host.append(note);
+    }
+    host.hidden = false;
+  }
+}
+
+function renderAllMeasurements(measurements){
+  const host = $('#bodygram-all');
+  const groupsHost = $('#bodygram-all-groups');
+  const count = $('#bodygram-all-count');
+  if(!host || !groupsHost) return;
+
+  const items = Array.isArray(measurements) ? measurements.filter(m => m && m.label) : [];
+  if(!items.length){
+    groupsHost.innerHTML = '';
+    host.hidden = true;
+    return;
+  }
+
+  groupsHost.innerHTML = '';
+  const groups = new Map();
+  items.forEach(item => {
+    const group = item.group || 'Other';
+    if(!groups.has(group)) groups.set(group, []);
+    groups.get(group).push(item);
+  });
+
+  const ordered = [...groups.keys()].sort((a, b) => {
+    const ai = BODYGRAM_GROUP_ORDER.indexOf(a);
+    const bi = BODYGRAM_GROUP_ORDER.indexOf(b);
+    return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi);
+  });
+
+  ordered.forEach(group => {
+    const section = document.createElement('div');
+    section.className = 'bodygram-group';
+    const heading = document.createElement('h4');
+    heading.textContent = group;
+    section.append(heading);
+
+    const rows = document.createElement('div');
+    rows.className = 'bodygram-rows';
+    groups.get(group).forEach(item => {
+      const row = document.createElement('div');
+      row.className = 'bodygram-row';
+
+      const label = document.createElement('span');
+      label.className = 'bodygram-row-label';
+      label.textContent = item.label;
+      if(item.profile_field) label.dataset.profileField = item.profile_field;
+
+      const value = document.createElement('span');
+      value.className = 'bodygram-row-value';
+      value.textContent = `${Number(item.value).toFixed(1)} cm`;
+
+      if(item.profile_field){
+        const badge = document.createElement('em');
+        badge.className = 'bodygram-row-badge';
+        badge.textContent = 'profile';
+        label.append(' ', badge);
+      }
+
+      row.append(label, value);
+      rows.append(row);
+    });
+    section.append(rows);
+    groupsHost.append(section);
+  });
+
+  if(count) count.textContent = `(${items.length})`;
+  host.hidden = false;
+}
+
+const BODYGRAM_POSTURE_ROWS = [
+  { key: 'ear', label: 'Head tilt', view: 'Front view' },
+  { key: 'shoulder', label: 'Shoulder tilt', view: 'Front view' },
+  { key: 'topHip', label: 'Pelvis tilt', view: 'Front view' },
+];
+
+function formatPostureAngle(value){
+  if(!Number.isFinite(value)) return null;
+  const rounded = Math.round(value * 10) / 10;
+  return `${rounded > 0 ? '+' : ''}${rounded.toFixed(1)}°`;
+}
+
+function postureReading(posture){
+  const rows = [];
+  const front = {};
+  (posture?.front?.angles || []).forEach(angle => {
+    if(angle && angle.name) front[angle.name] = Number(angle.value);
+  });
+  BODYGRAM_POSTURE_ROWS.forEach(row => {
+    if(Number.isFinite(front[row.key])){
+      rows.push({ label: row.label, view: row.view, value: front[row.key] });
+    }
+  });
+
+  const bodyLine = (posture?.right?.angles || [])
+    .find(entry => entry && entry.name === 'bodyLine')?.angles || [];
+  if(Number.isFinite(bodyLine[2])) rows.push({ label: 'Back lean', view: 'Right view', value: bodyLine[2] });
+  if(Number.isFinite(bodyLine[3])) rows.push({ label: 'Neck lean', view: 'Right view', value: bodyLine[3] });
+  return rows;
+}
+
+function renderPosture(posture){
+  const host = $('#bodygram-posture-rows');
+  const section = $('#bodygram-visuals');
+  if(!host) return;
+  const rows = postureReading(posture);
+  host.innerHTML = '';
+  if(!rows.length){
+    return;
+  }
+  rows.forEach(row => {
+    const item = document.createElement('div');
+    item.className = 'bodygram-posture-row';
+    const label = document.createElement('span');
+    label.textContent = row.label;
+    const note = document.createElement('small');
+    note.textContent = row.view;
+    label.append(note);
+    const value = document.createElement('strong');
+    value.textContent = formatPostureAngle(row.value);
+    item.append(label, value);
+    host.append(item);
+  });
+  if(section) section.hidden = false;
+}
+
+function renderBodygramPhotos(frontUrl, rightUrl){
+  const strip = $('#bodygram-saved-photos');
+  if(!strip) return;
+  const front = $('#bodygram-saved-front');
+  const right = $('#bodygram-saved-right');
+  if(!frontUrl && !rightUrl){
+    strip.hidden = true;
+    return;
+  }
+  if(front){
+    front.src = frontUrl || '';
+    front.hidden = !frontUrl;
+  }
+  if(right){
+    right.src = rightUrl || '';
+    right.hidden = !rightUrl;
+  }
+  strip.hidden = false;
+}
+
+/* Band placement mirrors Bodygram's dashboard: the six primary bands are drawn on
+ * the main avatar, the rest are built for the per-measurement thumbnails. Anchors
+ * are Bodygram heights (cm) with small offsets to land on the anatomical point. */
+const BODYGRAM_BAND_SPECS = [
+  { key: 'bustGirth', label: 'Bust', anchor: 'bustHeight', side: 'right', primary: true, frameCm: 36 },
+  { key: 'waistGirth', label: 'Waist', anchor: 'waistHeight', side: 'right', primary: true, frameCm: 34 },
+  { key: 'hipGirth', label: 'Hip', anchor: 'hipHeight', side: 'right', primary: true, frameCm: 36 },
+  { key: 'upperArmGirthR', label: 'Upper arm', anchor: 'bustHeight', limb: 'arm', side: 'left', primary: true, frameCm: 18 },
+  { key: 'thighGirthR', label: 'Thigh', anchor: 'hipHeight', offset: -11.7, limb: 'leg', side: 'left', primary: true, frameCm: 26 },
+  { key: 'calfGirthR', label: 'Calf', anchor: 'kneeHeightR', offset: -15, limb: 'leg', side: 'left', primary: true, frameCm: 22 },
+  { key: 'bellyWaistGirth', label: 'Belly waist', anchor: 'bellyWaistHeight', side: 'right', frameCm: 34 },
+  { key: 'underBustGirth', label: 'Under bust', anchor: 'bustHeight', offset: -9, side: 'right', frameCm: 30 },
+  { key: 'topHipGirth', label: 'Top hip', anchor: 'topHipHeight', side: 'right', frameCm: 32 },
+  { key: 'neckGirth', label: 'Neck', anchor: 'backNeckHeight', offset: 3.2, side: 'right', frameCm: 18 },
+  { key: 'neckBaseGirth', label: 'Neck base', anchor: 'backNeckHeight', offset: 1.2, side: 'right', frameCm: 22 },
+  { key: 'forearmGirthR', label: 'Forearm', anchor: 'waistHeight', offset: 2, limb: 'arm', side: 'left', frameCm: 18 },
+  { key: 'wristGirthR', label: 'Wrist', anchor: 'hipHeight', offset: -0.7, limb: 'arm', side: 'left', frameCm: 14 },
+  { key: 'midThighGirthR', label: 'Mid-thigh', anchor: 'hipHeight', offset: -21.7, limb: 'leg', side: 'left', frameCm: 22 },
+  { key: 'kneeGirthR', label: 'Knee', anchor: 'kneeHeightR', limb: 'leg', side: 'left', frameCm: 20 },
+];
+
+const BODYGRAM_LINE_DEFS = [
+  {
+    key: 'acrossBackShoulderWidth', label: 'Shoulder width',
+    from: { anchor: 'backNeckHeight', offset: -2.3, edge: 'outer' },
+    to: { anchor: 'backNeckHeight', offset: -2.3, edge: 'right' },
+  },
+  {
+    key: 'backNeckPointToWristLengthR', label: 'Sleeve length',
+    from: { anchor: 'backNeckHeight', offset: 0.5, edge: 'outer' },
+    via: [{ anchor: 'bustHeight', offset: 1, limb: 'arm', edge: 'outer' }],
+    to: { anchor: 'hipHeight', offset: -0.7, limb: 'arm', edge: 'outer' },
+  },
+  {
+    key: 'outerArmLengthR', label: 'Outer arm length',
+    from: { anchor: 'bustHeight', offset: 1, limb: 'arm', edge: 'outer' },
+    to: { anchor: 'hipHeight', offset: -0.7, limb: 'arm', edge: 'outer' },
+  },
+  {
+    key: 'shoulderToElbowR', label: 'Shoulder to elbow',
+    from: { anchor: 'bustHeight', offset: 1, limb: 'arm', edge: 'outer' },
+    to: { anchor: 'waistHeight', offset: -5, limb: 'arm', edge: 'outer' },
+  },
+  {
+    key: 'backNeckPointToWaist', label: 'Back length', view: 'back',
+    from: { anchor: 'backNeckHeight', offset: -0.5, edge: 'back' },
+    to: { anchor: 'waistHeight', offset: 0, edge: 'back' },
+  },
+  {
+    key: 'insideLegLengthR', label: 'Inside leg',
+    from: { anchor: 'insideLegHeight', offset: -4, limb: 'leg', edge: 'inner' },
+    to: { anchor: 'outerAnkleHeightR', offset: 6, limb: 'leg', edge: 'inner' },
+  },
+  {
+    key: 'outseamR', label: 'Outseam',
+    from: { anchor: 'insideLegHeight', offset: -4, limb: 'leg', edge: 'outer' },
+    to: { anchor: 'outerAnkleHeightR', offset: 6, limb: 'leg', edge: 'outer' },
+  },
+];
+
+const BODYGRAM_CARD_ORDER = [
+  'waistGirth', 'bustGirth', 'upperArmGirthR', 'hipGirth', 'thighGirthR', 'calfGirthR',
+  'neckGirth', 'neckBaseGirth', 'acrossBackShoulderWidth', 'wristGirthR',
+  'backNeckPointToWristLengthR', 'outerArmLengthR', 'underBustGirth', 'bellyWaistGirth',
+  'backNeckPointToWaist', 'topHipGirth', 'forearmGirthR', 'midThighGirthR', 'kneeGirthR',
+  'insideLegLengthR', 'outseamR', 'shoulderToElbowR',
+];
+
+function bodygramValues(measurements){
+  const values = {};
+  (Array.isArray(measurements) ? measurements : []).forEach(entry => {
+    if(entry && entry.name && Number.isFinite(Number(entry.value))){
+      values[entry.name] = Number(entry.value);
+    }
+  });
+  return values;
+}
+
+function bodygramBands(measurements){
+  const values = bodygramValues(measurements);
+  return BODYGRAM_BAND_SPECS.map(spec => {
+    const value = values[spec.key];
+    if(!Number.isFinite(value)) return null;
+    const base = values[spec.anchor];
+    const anchorCm = Number.isFinite(Number(base)) ? Number(base) + (Number(spec.offset) || 0) : null;
+    return {
+      key: spec.key,
+      label: spec.label,
+      value,
+      side: spec.side,
+      limb: spec.limb || '',
+      anchorCm,
+      frameCm: spec.frameCm || 30,
+      primary: Boolean(spec.primary),
+    };
+  }).filter(Boolean);
+}
+
+function bodygramLines(measurements){
+  const values = bodygramValues(measurements);
+  return BODYGRAM_LINE_DEFS.map(def => {
+    const value = Number(values[def.key]);
+    if(!Number.isFinite(value)) return null;
+    const resolve = end => {
+      const base = Number(values[end.anchor]);
+      if(!Number.isFinite(base)) return null;
+      return { cm: base + (Number(end.offset) || 0), limb: end.limb || '', edge: end.edge || 'outer' };
+    };
+    const from = resolve(def.from);
+    const to = resolve(def.to);
+    if(!from || !to) return null;
+    const via = (def.via || []).map(resolve).filter(Boolean);
+    return { key: def.key, label: def.label, value, from, to, via, view: def.view || 'front' };
+  }).filter(Boolean);
+}
+
+function bodygramCards(measurements){
+  const values = bodygramValues(measurements);
+  const specs = BODYGRAM_BAND_SPECS.concat(BODYGRAM_LINE_DEFS.map(def => ({ key: def.key, label: def.label })));
+  const byKey = {};
+  specs.forEach(spec => { byKey[spec.key] = spec; });
+  return BODYGRAM_CARD_ORDER
+    .map(key => {
+      const value = Number(values[key]);
+      const spec = byKey[key];
+      if(!spec || !Number.isFinite(value)) return null;
+      return { key, label: spec.label, value };
+    })
+    .filter(Boolean);
+}
+
+function renderBodygramCards(measurements, hasAvatar){
+  const host = $('#bodygram-cards');
+  if(!host) return;
+  const cards = bodygramCards(measurements);
+  if(!cards.length){
+    host.innerHTML = '';
+    host.hidden = true;
+    return;
+  }
+
+  host.innerHTML = '';
+  cards.forEach(card => {
+    const el = document.createElement('div');
+    el.className = 'bodygram-card';
+
+    const label = document.createElement('span');
+    label.className = 'bodygram-card-label';
+    label.textContent = card.label;
+
+    const value = document.createElement('strong');
+    value.className = 'bodygram-card-value';
+    value.textContent = Number(card.value).toFixed(1);
+    const unit = document.createElement('small');
+    unit.textContent = ' cm';
+    value.append(unit);
+
+    const image = document.createElement('img');
+    image.className = 'bodygram-card-thumb';
+    image.alt = `${card.label} on the 3D body model`;
+    image.dataset.thumb = card.key;
+    image.hidden = true;
+
+    el.append(label, value, image);
+    host.append(el);
+  });
+  host.hidden = false;
+  if(hasAvatar !== false) requestBodygramThumbnails(cards.map(card => card.key));
+}
+
+function requestBodygramThumbnails(keys){
+  if(!keys.length || !window.BodygramAvatar || !window.BodygramAvatar.thumbnails) return;
+  window.BodygramAvatar.thumbnails(keys).then(urls => {
+    Object.keys(urls || {}).forEach(key => {
+      document.querySelectorAll(`.bodygram-card-thumb[data-thumb="${key}"]`).forEach(image => {
+        image.src = urls[key];
+        image.hidden = false;
+      });
+    });
+  }).catch(() => {});
+}
+
+function setBodygramDownload(url){
+  const link = $('#bodygram-avatar-download');
+  if(!link) return;
+  if(!url){
+    link.hidden = true;
+    link.removeAttribute('href');
+    return;
+  }
+  link.href = url;
+  link.download = url.split('/').pop() || 'bodygram-avatar.obj';
+  link.hidden = false;
+}
+
+function toggleBodygramFullscreen(){
+  const stage = $('#bodygram-avatar-stage');
+  if(!stage) return;
+  const active = document.fullscreenElement || document.webkitFullscreenElement;
+  if(active){
+    const exit = document.exitFullscreen || document.webkitExitFullscreen;
+    if(exit) exit.call(document);
+    return;
+  }
+  const request = stage.requestFullscreen || stage.webkitRequestFullscreen;
+  if(!request){
+    toast('Fullscreen is not available in this browser.');
+    return;
+  }
+  const pending = request.call(stage);
+  if(pending && pending.catch) pending.catch(() => toast('Fullscreen was blocked by the browser.'));
+}
+
+function syncBodygramFullscreenLabel(){
+  const button = $('#bodygram-avatar-full');
+  if(!button) return;
+  const active = document.fullscreenElement || document.webkitFullscreenElement;
+  button.textContent = active ? 'Exit 360° view' : '360° view';
+}
+
+['fullscreenchange', 'webkitfullscreenchange'].forEach(name => {
+  document.addEventListener(name, syncBodygramFullscreenLabel);
+});
+
+function renderBodygramAvatar(result){
+  const url = result.avatar_url;
+  const section = $('#bodygram-visuals');
+  const stage = $('#bodygram-avatar-stage');
+  if(!stage) return;
+  if(!url){
+    if(window.BodygramAvatar) window.BodygramAvatar.destroy();
+    if(section) section.hidden = true;
+    setBodygramDownload('');
+    return;
+  }
+  if(section) section.hidden = false;
+  setBodygramDownload(url);
+  if(window.BodygramAvatar){
+    const all = result.all_measurements || result.measurements;
+    window.BodygramAvatar.load(url, {
+      bands: bodygramBands(all),
+      lines: bodygramLines(all),
+      heightCm: Number(result.height_cm) || 0,
+    });
+  } else {
+    const status = $('#bodygram-avatar-status');
+    if(status){
+      status.textContent = '3D viewer could not load.';
+      status.classList.add('is-error');
+      status.hidden = false;
+    }
+  }
+}
+
+function deleteBodygramPhotos(){
+  const button = $('#bodygram-delete-photos');
+  if(button){ button.disabled = true; }
+  fetch('/api/measurements/bodygram/photos/delete/', { method: 'POST' })
+    .then(response => {
+      if(!response.ok) throw new Error('Could not delete the photos.');
+      const strip = $('#bodygram-saved-photos');
+      if(strip) strip.hidden = true;
+      const saved = readLocal('bodygram-result', null);
+      if(saved){
+        saved.front_photo_url = '';
+        saved.right_photo_url = '';
+        saveLocal('bodygram-result', saved);
+      }
+      toast('Scan photos deleted.');
+    })
+    .catch(error => toast(error.message || 'Could not delete the photos.'))
+    .finally(() => { if(button){ button.disabled = false; } });
+}
+
+function renderBodygramResult(result){
+  if(!result) return;
+  const all = result.all_measurements || result.measurements || [];
+  renderBodyComposition(result.body_composition, result.scan_id, result.scanned_at);
+  renderBodygramCards(all, Boolean(result.avatar_url));
+  renderAllMeasurements(all);
+  renderBodygramPhotos(result.front_photo_url, result.right_photo_url);
+  renderPosture(result.posture);
+  renderBodygramAvatar(result);
+  saveLocal('bodygram-result', {
+    scan_id: result.scan_id || '',
+    scanned_at: result.scanned_at || '',
+    body_composition: result.body_composition || null,
+    posture: result.posture || null,
+    avatar_url: result.avatar_url || '',
+    height_cm: result.height_cm || 0,
+    front_photo_url: result.front_photo_url || '',
+    right_photo_url: result.right_photo_url || '',
+    all_measurements: all,
+  });
+}
+
+function loadBodygramResult(){
+  let saved = null;
+  const embedded = $('#bodygram-saved');
+  if(embedded){
+    try { saved = JSON.parse(embedded.textContent || 'null'); } catch(e){ saved = null; }
+  }
+  if(!saved) saved = readLocal('bodygram-result', null);
+  if(!saved) return;
+  renderBodygramResult(saved);
+}
+
+function runBodygramScan(){
+  const front = $('#bodygram-front')?.files?.[0];
+  const right = $('#bodygram-right')?.files?.[0];
+  const button = $('#bodygram-submit');
+  const age = $('#bodygram-age')?.value;
+  const height = $('#bodygram-height')?.value;
+  const weight = $('#bodygram-weight')?.value;
+
+  if(!front || !right){
+    setBodygramStatus('Upload both a front photo and a right-side photo.', 'error');
+    toast('Upload both photos for a Bodygram scan.');
+    return;
+  }
+  if(!age || !height || !weight){
+    setBodygramStatus('Enter your age, height, and weight before scanning.', 'error');
+    toast('Add age, height, and weight first.');
+    return;
+  }
+
+  const formData = new FormData();
+  formData.append('front_photo', front);
+  formData.append('right_photo', right);
+  formData.append('gender', $('#bodygram-gender')?.value || 'female');
+  formData.append('age', age);
+  formData.append('height', height);
+  formData.append('weight', weight);
+
+  const originalLabel = button?.textContent;
+  if(button){ button.disabled = true; button.textContent = 'Scanning with Bodygram…'; }
+  setBodygramStatus('Bodygram is estimating your measurements. This can take up to a minute.');
+
+  fetch('/api/measurements/bodygram/', { method: 'POST', body: formData })
+    .then(async response => {
+      let payload = {};
+      try { payload = await response.json(); } catch(e) {}
+      if(!response.ok) throw new Error(payload.error || `Bodygram scan failed (HTTP ${response.status}).`);
+      return payload;
+    })
+    .then(payload => {
+      const values = payload.measurements || {};
+      Object.entries(values).forEach(([field, value]) => {
+        $$(`[data-measure="${field}"]`).forEach(el => {
+          el.dataset.cm = value;
+          el.value = value;
+        });
+      });
+      if(Object.keys(values).length){
+        switchUnit('cm');
+        const stored = {};
+        $$('[data-measure]').forEach(el => stored[el.dataset.measure] = el.value);
+        stored.unit = 'cm';
+        saveLocal('measurements', stored);
+      }
+      renderBodygramResult(payload);
+      const count = Object.keys(values).length;
+      const total = (payload.all_measurements || []).length;
+      const fat = bodygramCompositionValue('bodyFatPercentage',
+        payload.body_composition?.bodyFatPercentage);
+      const extra = fat ? ` Body fat estimate: ${fat}.` : '';
+      const detail = total > count ? ` Bodygram returned ${total} in total — open the full list.` : '';
+      setBodygramStatus(`Bodygram estimated ${count} tailoring measurement${count === 1 ? '' : 's'} and saved them to your profile.${detail}${extra} Review the form below.`, 'success');
+      toast('Measurements estimated with Bodygram.');
+    })
+    .catch(error => {
+      const message = error.message || 'Bodygram scan failed. Please try again.';
+      setBodygramStatus(message, 'error');
+      toast(message);
+    })
+    .finally(() => {
+      if(button){ button.disabled = false; button.textContent = originalLabel || 'Estimate measurements from photos'; }
+    });
+}
+
 function updateBudget(value){
   const el = $('#budget-value') || $('#brief-budget-display');
   if(el) el.textContent = '₦' + Number(value).toLocaleString('en-NG');
@@ -342,8 +976,9 @@ function runDedicatedTryOn(){
   $('#dedicated-vton-loader')?.style.setProperty('display', 'flex');
   fetch('/api/vton/tryon/', { method: 'POST', body: formData })
     .then(async response => {
-      const data = await response.json();
-      if(!response.ok) throw new Error(data.error || 'Try-on generation failed.');
+      let data = {};
+      try { data = await response.json(); } catch (e) {}
+      if(!response.ok) throw new Error(data.error || `Try-on failed (HTTP ${response.status}).`);
       return data;
     })
     .then(data => {
@@ -353,12 +988,22 @@ function runDedicatedTryOn(){
       }
       $('#tryon-stage-label').textContent = 'Generated result';
       $('.tryon-result-copy')?.style.setProperty('display', 'none');
-      if(status) status.textContent = 'Your generated look is ready.';
+      if(status){
+        const engine = data.provider === 'gemini' ? 'Gemini' : 'FASHN VTON 1.5';
+        status.textContent = `Your generated look is ready (${engine}).`;
+        status.className = 'tryon-status is-success';
+        status.style.display = 'block';
+      }
       toast('Virtual try-on generated.');
     })
     .catch(error => {
-      if(status) status.textContent = error.message;
-      toast(error.message);
+      const message = error.message || 'Virtual try-on failed. Please try again.';
+      if(status){
+        status.textContent = message;
+        status.className = 'tryon-status is-error';
+        status.style.display = 'block';
+      }
+      toast(message);
     })
     .finally(() => {
       $('#dedicated-vton-loader')?.style.setProperty('display', 'none');
@@ -418,8 +1063,15 @@ function runVTONTryOn(){
   const loaderStep = $('#vton-loader-step');
   const outputImg = $('#vton-output-image');
   const badge = $('#result-badge');
+  const status = $('#vton-status');
 
   if(!loader) return;
+
+  if(status){
+    status.textContent = '';
+    status.className = 'tryon-status';
+    status.style.display = 'none';
+  }
 
   loader.style.display = 'flex';
   if(loaderTitle) loaderTitle.textContent = 'FASHN VTON 1.5 Neural Rendering...';
@@ -433,10 +1085,10 @@ function runVTONTryOn(){
     if(loaderStep) loaderStep.textContent = 'Step 3/3: Harmonizing fabric drape & lighting...';
   }, 1800);
 
-  // Send the original images to Django; the server calls the HF Space.
+  // Send the original images to Django; the server calls the AI provider.
   const modelPreset = $('.model-thumb.selected')?.dataset.model || 'male-1';
   const formData = new FormData();
-  formData.append('design_id', activeGarment.id);
+  if(/^\d+$/.test(String(activeGarment.id))) formData.append('design_id', activeGarment.id);
   formData.append('model_preset', modelPreset);
   formData.append('category', $('#vton-category-select')?.value || activeGarment.vtonCategory || 'one-pieces');
   formData.append('garment_photo_type', 'model');
@@ -447,17 +1099,31 @@ function runVTONTryOn(){
 
   fetch('/api/vton/tryon/', { method: 'POST', body: formData })
     .then(async response => {
-      const data = await response.json();
-      if(!response.ok) throw new Error(data.error || 'Try-on generation failed.');
+      let data = {};
+      try { data = await response.json(); } catch (e) {}
+      if(!response.ok) throw new Error(data.error || `Try-on failed (HTTP ${response.status}).`);
       return data;
     })
     .then(data => {
+      const engine = data.provider === 'gemini' ? 'Gemini' : 'FASHN VTON 1.5';
       if(outputImg) outputImg.src = data.result_image;
-      if(badge) badge.textContent = `✨ FASHN VTON 1.5 Render: ${activeGarment.title}`;
-      toast('Virtual Try-On generated with FASHN VTON 1.5!');
+      if(badge) badge.textContent = `✨ ${engine} Render: ${activeGarment.title}`;
+      if(status){
+        status.textContent = `Look generated with ${engine}. Save it to your wardrobe when you are happy.`;
+        status.className = 'tryon-status is-success';
+        status.style.display = 'block';
+      }
+      toast('Virtual try-on generated!');
     })
     .catch(error => {
-      toast(error.message);
+      const message = error.message || 'Virtual try-on failed. Please try again.';
+      if(badge) badge.textContent = 'Try-On Failed';
+      if(status){
+        status.textContent = message;
+        status.className = 'tryon-status is-error';
+        status.style.display = 'block';
+      }
+      toast(message);
     })
     .finally(() => {
       loader.style.display = 'none';
@@ -786,6 +1452,7 @@ document.addEventListener('click', e => {
 
 document.addEventListener('DOMContentLoaded', () => {
   loadMeasurements();
+  loadBodygramResult();
 
   const favs = readLocal('favorites', []);
   $$('[data-favorite]').forEach(b => {

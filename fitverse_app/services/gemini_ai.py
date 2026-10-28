@@ -1,5 +1,5 @@
 import json
-import tempfile
+from functools import lru_cache
 from pathlib import Path
 from urllib.request import urlopen
 from uuid import uuid4
@@ -11,6 +11,20 @@ class GeminiError(Exception):
     """Raised when Gemini cannot produce the requested result."""
 
 
+def _request_error(exc):
+    message = str(exc)
+    if "RESOURCE_EXHAUSTED" in message or "quota" in message.lower():
+        return "Gemini quota is exhausted for this key. Check billing or use a key with Gemini image quota enabled."
+    if "DEADLINE_EXCEEDED" in message or "504" in message:
+        return "Gemini timed out while processing the request. Please try again."
+    if "not found" in message.lower() or "no longer available" in message.lower():
+        return "The configured Gemini model is unavailable for this API key. Update the model in .env."
+    if "client has been closed" in message.lower():
+        return "The Gemini client closed before the request finished. Please try again."
+    return "Gemini request failed. Check the API key, model access, and network connection."
+
+
+@lru_cache(maxsize=1)
 def _client():
     api_key = getattr(settings, "GEMINI_API_KEY", "")
     if not api_key:
@@ -62,10 +76,10 @@ Catalog: {catalog_text}
     except GeminiError:
         raise
     except Exception as exc:
-        raise GeminiError("Gemini stylist request failed. Please try again.") from exc
+        raise GeminiError(_request_error(exc)) from exc
 
 
-def _image_bytes(value):
+def _image_bytes(value, label="image"):
     if hasattr(value, "read"):
         value.seek(0)
         return value.read(), getattr(value, "content_type", "image/jpeg")
@@ -73,12 +87,12 @@ def _image_bytes(value):
         with urlopen(str(value), timeout=20) as response:
             return response.read(), response.headers.get_content_type()
     except Exception as exc:
-        raise GeminiError("Could not read the garment image.") from exc
+        raise GeminiError(f"Could not read the {label} image.") from exc
 
 
 def generate_try_on(*, person_image, garment_image, category):
-    person_bytes, person_mime = _image_bytes(person_image)
-    garment_bytes, garment_mime = _image_bytes(garment_image)
+    person_bytes, person_mime = _image_bytes(person_image, label="person")
+    garment_bytes, garment_mime = _image_bytes(garment_image, label="garment")
     prompt = (
         "Create a realistic virtual try-on image. Put the garment from the second "
         "image onto the person in the first image. Preserve the person's face, pose, "
@@ -109,4 +123,4 @@ def generate_try_on(*, person_image, garment_image, category):
     except GeminiError:
         raise
     except Exception as exc:
-        raise GeminiError("Gemini try-on generation failed. Please try again.") from exc
+        raise GeminiError(_request_error(exc)) from exc

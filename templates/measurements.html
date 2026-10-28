@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load static %}
 
 {% block title %}My Measurements | Fitverse AI{% endblock %}
 {% block page_title %}My measurements{% endblock %}
@@ -11,6 +12,113 @@
   </div>
   <p>Keep your measurements organized for bespoke tailoring and virtual fitting. Measurements are automatically synced with your profile.</p>
 </div>
+
+<section class="panel bodygram-panel">
+  <div class="panel-head">
+    <div>
+      <div class="eyebrow">Automatic estimation</div>
+      <h3>Measure with Bodygram</h3>
+    </div>
+    <span class="tag">Bodygram API</span>
+  </div>
+  <p class="muted" style="font-size:13px;margin-top:0">
+    Upload a front-facing and a right-side photo, then add your age, height, and weight.
+    Bodygram estimates your measurements, builds a 3D body model, and reads your posture.
+    Photos are stored on your profile so you can review the scan — delete them below at any time.
+  </p>
+
+  <div class="bodygram-photos">
+    <label class="bodygram-photo" for="bodygram-front">
+      <span class="bodygram-photo-label">Front photo</span>
+      <span class="bodygram-photo-icon">♙</span>
+      <small>Full body, facing the camera</small>
+      <img id="bodygram-front-preview" alt="" aria-hidden="true">
+      <input type="file" id="bodygram-front" accept="image/jpeg,image/png" onchange="previewBodygramPhoto(this, '#bodygram-front-preview')">
+    </label>
+    <label class="bodygram-photo" for="bodygram-right">
+      <span class="bodygram-photo-label">Right side</span>
+      <span class="bodygram-photo-icon">◑</span>
+      <small>Full body, facing right</small>
+      <img id="bodygram-right-preview" alt="" aria-hidden="true">
+      <input type="file" id="bodygram-right" accept="image/jpeg,image/png" onchange="previewBodygramPhoto(this, '#bodygram-right-preview')">
+    </label>
+  </div>
+
+  <div class="measurement-grid">
+    <div class="field">
+      <label for="bodygram-gender">Gender</label>
+      <select id="bodygram-gender">
+        <option value="female" {% if measurements.gender == 'female' %}selected{% endif %}>Female</option>
+        <option value="male" {% if measurements.gender == 'male' %}selected{% endif %}>Male</option>
+      </select>
+    </div>
+    <div class="field">
+      <label for="bodygram-age">Age</label>
+      <input id="bodygram-age" type="number" min="10" max="100" value="{{ measurements.age|default:'' }}">
+    </div>
+    <div class="field">
+      <label for="bodygram-height">Height (cm)</label>
+      <input id="bodygram-height" type="number" min="50" max="250" step="0.5" value="{% if measurements.height_cm %}{{ measurements.height_cm|floatformat:'-1' }}{% endif %}">
+    </div>
+    <div class="field">
+      <label for="bodygram-weight">Weight (kg)</label>
+      <input id="bodygram-weight" type="number" min="20" max="300" step="0.5" value="{% if measurements.weight_kg %}{{ measurements.weight_kg|floatformat:'-1' }}{% endif %}">
+    </div>
+  </div>
+
+  <div id="bodygram-saved-photos" class="bodygram-saved-photos" hidden>
+    <div class="bodygram-saved-photo">
+      <img id="bodygram-saved-front" alt="Front photo from your last scan">
+      <span>Front</span>
+    </div>
+    <div class="bodygram-saved-photo">
+      <img id="bodygram-saved-right" alt="Right-side photo from your last scan">
+      <span>Right side</span>
+    </div>
+    <div class="bodygram-photo-actions">
+      <small>Photos from this scan</small>
+      <button type="button" class="text-button" id="bodygram-delete-photos" onclick="deleteBodygramPhotos()">Delete photos</button>
+    </div>
+  </div>
+
+  <div id="bodygram-visuals" class="bodygram-visuals" hidden>
+    <div class="bodygram-avatar">
+      <div class="bodygram-visual-head">
+        <h4>Your 3D body model</h4>
+        <span class="bodygram-visual-note">Bodygram · high resolution</span>
+      </div>
+      <div id="bodygram-avatar-stage" class="bodygram-avatar-stage">
+        <canvas id="bodygram-avatar-canvas" aria-label="Interactive 3D model of your body from the Bodygram scan"></canvas>
+        <div id="bodygram-avatar-status" class="bodygram-avatar-status">Loading 3D model…</div>
+        <div class="bodygram-avatar-actions">
+          <button type="button" id="bodygram-avatar-reset" class="bodygram-avatar-reset" onclick="resetBodygramAvatar()">Reset view</button>
+          <button type="button" id="bodygram-avatar-full" class="bodygram-avatar-reset" onclick="toggleBodygramFullscreen()">360° view</button>
+          <a id="bodygram-avatar-download" class="bodygram-avatar-reset" download="bodygram-avatar.obj" hidden>Download .obj</a>
+        </div>
+      </div>
+      <small class="bodygram-visual-hint">Drag to rotate · scroll to zoom</small>
+    </div>
+    <div class="bodygram-posture">
+      <div class="bodygram-visual-head">
+        <h4>Posture reading</h4>
+        <span class="bodygram-visual-note">0° = upright</span>
+      </div>
+      <div id="bodygram-posture-rows" class="bodygram-posture-rows"></div>
+      <small class="bodygram-visual-hint">Measured from your front and right-side photos. Not a medical assessment.</small>
+    </div>
+  </div>
+
+  <div id="bodygram-cards" class="bodygram-cards" hidden></div>
+  <div id="bodygram-composition" class="bodygram-composition" hidden></div>
+  <details id="bodygram-all" class="bodygram-all" hidden>
+    <summary>All Bodygram measurements <span id="bodygram-all-count" class="bodygram-all-count"></span></summary>
+    <div id="bodygram-all-groups" class="bodygram-all-groups"></div>
+  </details>
+  <div id="bodygram-status" class="tryon-status" style="display:none" role="status" aria-live="polite"></div>
+  <button type="button" id="bodygram-submit" onclick="runBodygramScan()">Estimate measurements from photos</button>
+  <p class="bodygram-hint">Uses one Bodygram scan credit each time you estimate.</p>
+  {{ bodygram_saved|json_script:"bodygram-saved" }}
+</section>
 
 <div class="segmented">
   <button class="active" data-unit="cm" onclick="switchUnit('cm')">Centimetres</button>
@@ -82,3 +190,10 @@
   </section>
 </div>
 {% endblock content %}
+
+{% block extra_scripts %}
+<script src="{% static 'assets/vendor/three.min.js' %}"></script>
+<script src="{% static 'assets/vendor/OBJLoader.js' %}"></script>
+<script src="{% static 'assets/vendor/OrbitControls.js' %}"></script>
+<script src="{% static 'assets/bodygram-avatar.js' %}?v=14"></script>
+{% endblock %}

@@ -50,6 +50,10 @@ class UserMeasurement(models.Model):
         ('cm', 'Centimeters'),
         ('in', 'Inches'),
     ]
+    GENDER_CHOICES = [
+        ('male', 'Male'),
+        ('female', 'Female'),
+    ]
 
     user = models.OneToOneField(User, on_delete=models.CASCADE, null=True, blank=True, related_name='measurements')
     session_key = models.CharField(max_length=100, blank=True, db_index=True)
@@ -61,6 +65,18 @@ class UserMeasurement(models.Model):
     sleeve = models.FloatField(default=64.0)
     inseam = models.FloatField(default=81.0)
     neck = models.FloatField(default=39.0)
+    age = models.PositiveSmallIntegerField(null=True, blank=True)
+    gender = models.CharField(max_length=10, choices=GENDER_CHOICES, blank=True)
+    height_cm = models.FloatField(null=True, blank=True)
+    weight_kg = models.FloatField(null=True, blank=True)
+    bodygram_scan_id = models.CharField(max_length=100, blank=True)
+    bodygram_measurements = models.JSONField(default=list, blank=True)
+    body_composition = models.JSONField(default=dict, blank=True)
+    bodygram_posture = models.JSONField(default=dict, blank=True)
+    bodygram_front_photo = models.FileField(upload_to='bodygram/photos/', blank=True)
+    bodygram_right_photo = models.FileField(upload_to='bodygram/photos/', blank=True)
+    bodygram_avatar = models.FileField(upload_to='bodygram/avatars/', blank=True)
+    bodygram_scanned_at = models.DateTimeField(null=True, blank=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):

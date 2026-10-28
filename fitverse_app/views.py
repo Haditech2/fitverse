@@ -1,4 +1,8 @@
 import json
+import logging
+import os
+
+from django.core.files.base import ContentFile
 from django.shortcuts import render, get_object_or_404, redirect
 from django.http import JsonResponse
 from django.conf import settings
@@ -6,14 +10,70 @@ from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.models import User
 from django.db.models import Q
+from django.utils import timezone
 from .models import Category, Design, UserMeasurement, SavedLook, Favorite, VirtualTryOn
 from .services.fashn_vton import FashnVtonError, generate_try_on
 from .services.gemini_ai import GeminiError, generate_stylist_response, generate_try_on as generate_gemini_try_on
+from .services.bodygram import BodygramError, estimate_measurements
+
+logger = logging.getLogger(__name__)
+
+
+class TryOnError(Exception):
+    """Raised when no configured provider can render a try-on."""
+
 
 def get_session_key(request):
     if not request.session.session_key:
         request.session.create()
     return request.session.session_key
+
+
+def _generate_try_on(*, person_image, garment_image, category, garment_photo_type):
+    """Render a try-on, falling back from Gemini to FASHN VTON.
+
+    Returns a ``(result_url, provider)`` tuple. Gemini is only attempted when it
+    is the configured provider and an API key is present; any Gemini failure is
+    logged and retried once through the FASHN Space.
+    """
+    provider = getattr(settings, 'AI_PROVIDER', 'gemini')
+    use_gemini = provider == 'gemini' and bool(getattr(settings, 'GEMINI_API_KEY', ''))
+    failures = []
+
+    if use_gemini:
+        try:
+            result_image = generate_gemini_try_on(
+                person_image=person_image,
+                garment_image=garment_image,
+                category=category,
+            )
+            return result_image, 'gemini'
+        except GeminiError as exc:
+            logger.warning("Gemini try-on failed, falling back to FASHN VTON: %s", exc)
+            failures.append(f"Gemini: {exc}")
+        finally:
+            # Reading an upload advances its stream; rewind so the fallback can read it again.
+            for upload in (person_image, garment_image):
+                if hasattr(upload, 'seek'):
+                    upload.seek(0)
+
+    try:
+        result_image = generate_try_on(
+            person_image=person_image,
+            garment_image=garment_image,
+            category=category,
+            garment_photo_type=garment_photo_type,
+            num_timesteps=30,
+            guidance_scale=1.5,
+            seed=42,
+            segmentation_free=True,
+        )
+        return result_image, 'fashn'
+    except FashnVtonError as exc:
+        logger.warning("FASHN VTON try-on failed: %s", exc)
+        failures.append(f"FASHN VTON: {exc}")
+
+    raise TryOnError("Could not generate the virtual try-on. " + " | ".join(failures))
 
 # -------------------------------------------------------------
 # PAGE VIEWS
@@ -85,8 +145,25 @@ def measurements_view(request):
         user=request.user if request.user.is_authenticated else None,
         session_key=session_key if not request.user.is_authenticated else ''
     )
+    bodygram_saved = None
+    if measurements.bodygram_measurements or measurements.body_composition:
+        bodygram_saved = {
+            'scan_id': measurements.bodygram_scan_id,
+            'all_measurements': measurements.bodygram_measurements or [],
+            'body_composition': measurements.body_composition or {},
+            'posture': measurements.bodygram_posture or {},
+            'avatar_url': measurements.bodygram_avatar.url if measurements.bodygram_avatar else '',
+            'height_cm': measurements.height_cm or 0,
+            'front_photo_url': measurements.bodygram_front_photo.url if measurements.bodygram_front_photo else '',
+            'right_photo_url': measurements.bodygram_right_photo.url if measurements.bodygram_right_photo else '',
+            'scanned_at': (
+                timezone.localtime(measurements.bodygram_scanned_at).strftime('%d %b %Y, %H:%M')
+                if measurements.bodygram_scanned_at else ''
+            ),
+        }
     return render(request, 'measurements.html', {
         'measurements': measurements,
+        'bodygram_saved': bodygram_saved,
     })
 
 def style_intelligence_view(request):
@@ -278,24 +355,13 @@ def api_vton_tryon(request):
         return JsonResponse({'error': 'Select a garment before generating a try-on.'}, status=400)
 
     try:
-        if getattr(settings, 'AI_PROVIDER', 'gemini') == 'gemini' and getattr(settings, 'GEMINI_API_KEY', ''):
-            result_image = generate_gemini_try_on(
-                person_image=person_image,
-                garment_image=garment_image,
-                category=category,
-            )
-        else:
-            result_image = generate_try_on(
-                person_image=person_image,
-                garment_image=garment_image,
-                category=category,
-                garment_photo_type=request.POST.get('garment_photo_type', 'model'),
-                num_timesteps=30,
-                guidance_scale=1.5,
-                seed=42,
-                segmentation_free=True,
-            )
-    except (FashnVtonError, GeminiError) as exc:
+        result_image, provider = _generate_try_on(
+            person_image=person_image,
+            garment_image=garment_image,
+            category=category,
+            garment_photo_type=request.POST.get('garment_photo_type', 'model'),
+        )
+    except TryOnError as exc:
         return JsonResponse({'error': str(exc)}, status=503)
 
     tryon = VirtualTryOn.objects.create(
@@ -313,6 +379,7 @@ def api_vton_tryon(request):
         'status': 'success',
         'tryon_id': tryon.id,
         'result_image': result_image,
+        'provider': provider,
         'garment_title': design.title if design else 'Active Look',
     })
 
@@ -344,6 +411,181 @@ def api_save_measurements(request):
 
     m.save()
     return JsonResponse({'status': 'saved'})
+
+
+@csrf_exempt
+def api_bodygram_measurements(request):
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST required'}, status=405)
+
+    front_photo = request.FILES.get('front_photo')
+    right_photo = request.FILES.get('right_photo')
+    if not front_photo or not right_photo:
+        return JsonResponse(
+            {'error': 'Upload both a front photo and a right-side photo.'}, status=400
+        )
+
+    allowed_types = {'image/jpeg', 'image/jpg', 'image/png'}
+    for photo in (front_photo, right_photo):
+        if getattr(photo, 'content_type', '') not in allowed_types:
+            return JsonResponse(
+                {'error': 'Bodygram accepts JPEG or PNG photos.'}, status=400
+            )
+        if photo.size > 12 * 1024 * 1024:
+            return JsonResponse(
+                {'error': 'Choose photos smaller than 12 MB each.'}, status=400
+            )
+
+    def as_float(name):
+        try:
+            return float(request.POST.get(name, ''))
+        except (TypeError, ValueError):
+            return None
+
+    age = as_float('age')
+    height_cm = as_float('height')
+    weight_kg = as_float('weight')
+    gender = (request.POST.get('gender') or '').strip().lower()
+
+    if gender not in {'male', 'female'}:
+        return JsonResponse({'error': 'Select a gender for the Bodygram scan.'}, status=400)
+    if age is None or not 10 <= age <= 100:
+        return JsonResponse({'error': 'Enter an age between 10 and 100.'}, status=400)
+    if height_cm is None or not 50 <= height_cm <= 250:
+        return JsonResponse({'error': 'Enter a height between 50 and 250 cm.'}, status=400)
+    if weight_kg is None or not 20 <= weight_kg <= 300:
+        return JsonResponse({'error': 'Enter a weight between 20 and 300 kg.'}, status=400)
+
+    front_bytes = front_photo.read()
+    right_bytes = right_photo.read()
+
+    try:
+        result = estimate_measurements(
+            front_photo=front_bytes,
+            right_photo=right_bytes,
+            age=age,
+            gender=gender,
+            height_cm=height_cm,
+            weight_kg=weight_kg,
+        )
+    except BodygramError as exc:
+        return JsonResponse({'error': str(exc)}, status=503)
+
+    session_key = get_session_key(request)
+    measurements, _ = UserMeasurement.objects.get_or_create(
+        user=request.user if request.user.is_authenticated else None,
+        session_key=session_key if not request.user.is_authenticated else ''
+    )
+
+    for field, value in result['measurements'].items():
+        setattr(measurements, field, value)
+    measurements.age = int(age)
+    measurements.gender = gender
+    measurements.height_cm = height_cm
+    measurements.weight_kg = weight_kg
+    measurements.unit = 'cm'
+    measurements.bodygram_scan_id = result['scan_id']
+    measurements.bodygram_measurements = result['all_measurements']
+    measurements.body_composition = result['body_composition'] or {}
+    measurements.bodygram_posture = result['posture'] or {}
+    measurements.bodygram_scanned_at = timezone.now()
+    _store_bodygram_files(
+        measurements,
+        scan_id=result['scan_id'],
+        front_bytes=front_bytes,
+        right_bytes=right_bytes,
+        front_name=getattr(front_photo, 'name', '') or '',
+        right_name=getattr(right_photo, 'name', '') or '',
+        avatar_bytes=result.get('avatar_obj'),
+    )
+    measurements.save()
+
+    return JsonResponse({
+        'status': 'success',
+        'scan_id': result['scan_id'],
+        'measurements': result['measurements'],
+        'all_measurements': result['all_measurements'],
+        'body_composition': result['body_composition'],
+        'posture': result['posture'],
+        'avatar_url': measurements.bodygram_avatar.url if measurements.bodygram_avatar else '',
+        'height_cm': measurements.height_cm or 0,
+        'front_photo_url': measurements.bodygram_front_photo.url if measurements.bodygram_front_photo else '',
+        'right_photo_url': measurements.bodygram_right_photo.url if measurements.bodygram_right_photo else '',
+        'scanned_at': timezone.localtime(measurements.bodygram_scanned_at).strftime('%d %b %Y, %H:%M'),
+    })
+
+
+def _photo_extension(filename, fallback='jpg'):
+    suffix = os.path.splitext(filename or '')[1].lower().lstrip('.')
+    return suffix if suffix in {'jpg', 'jpeg', 'png'} else fallback
+
+
+def _replace_file(field_file, name, content):
+    if field_file:
+        field_file.delete(save=False)
+    field_file.save(name, content, save=False)
+
+
+def _store_shared_file(field_file, name, content):
+    """Store a scan artifact once per file name and reuse existing copies.
+
+    Avatar models are ~3 MB and identical for a given scan, so repeated saves
+    for the same scan point at the same file instead of duplicating it.
+    """
+    storage = field_file.storage
+    if storage.exists(name):
+        if field_file.name != name:
+            field_file.name = name
+        return
+    _replace_file(field_file, name, content)
+
+
+def _store_bodygram_files(profile, *, scan_id, front_bytes, right_bytes,
+                          front_name, right_name, avatar_bytes):
+    """Persist the scan artifacts without a second scan or quota use.
+
+    Photos are stored so the profile can show which images produced the scan,
+    the `.obj` avatar is stored for the 3D viewer, and both are deletable.
+    """
+    scan_id = scan_id or 'scan'
+    _replace_file(
+        profile.bodygram_front_photo,
+        f"{scan_id}-front.{_photo_extension(front_name)}",
+        ContentFile(front_bytes),
+    )
+    _replace_file(
+        profile.bodygram_right_photo,
+        f"{scan_id}-right.{_photo_extension(right_name)}",
+        ContentFile(right_bytes),
+    )
+    if avatar_bytes:
+        _store_shared_file(
+            profile.bodygram_avatar,
+            f"{scan_id}.obj",
+            ContentFile(avatar_bytes),
+        )
+
+
+@csrf_exempt
+def api_bodygram_delete_photos(request):
+    """Remove the stored scan photos from the profile."""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST required'}, status=405)
+
+    session_key = get_session_key(request)
+    measurements, _ = UserMeasurement.objects.get_or_create(
+        user=request.user if request.user.is_authenticated else None,
+        session_key=session_key if not request.user.is_authenticated else ''
+    )
+
+    for field in ('bodygram_front_photo', 'bodygram_right_photo'):
+        field_file = getattr(measurements, field)
+        if field_file:
+            field_file.delete(save=False)
+        setattr(measurements, field, '')
+    measurements.save(update_fields=['bodygram_front_photo', 'bodygram_right_photo'])
+
+    return JsonResponse({'status': 'deleted'})
 
 
 @csrf_exempt

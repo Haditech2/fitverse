@@ -46,3 +46,6 @@ venv.bak/
 .vscode/
 .idea/
 *.swp
+
+# User uploads and scan output (regenerated at runtime)
+media/
