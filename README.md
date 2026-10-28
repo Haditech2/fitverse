@@ -37,6 +37,13 @@ Keep the key blank until you have created one at
 [Google AI Studio](https://aistudio.google.com/apikey). Restart Django after
 changing `.env`.
 
+The stylist uses `GEMINI_TEXT_MODEL` (default `gemini-3.6-flash`). If Google
+reports the preferred model as overloaded (503/504), the server retries the
+models in `GEMINI_TEXT_FALLBACKS` in order, so one busy model does not break the
+chat. Image try-on uses `GEMINI_IMAGE_MODEL`, which needs image quota on the
+key; Gemini's free tier currently reports a limit of `0` for the image models,
+so try-on runs through FASHN VTON 1.5 instead of Gemini on free-tier keys.
+
 The first try-on request uses the public Hugging Face Space
 `fashn-ai/fashn-vton-1.5`. If the Space requires authentication, set
 `HF_TOKEN` in the environment. The token stays server-side and is never sent

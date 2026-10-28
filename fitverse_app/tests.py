@@ -3,6 +3,7 @@ import json
 import shutil
 import tempfile
 from io import BytesIO
+from pathlib import Path
 from unittest import mock
 
 from django.core.files.base import ContentFile
@@ -12,7 +13,7 @@ from django.utils import timezone
 
 from . import views
 from .models import UserMeasurement
-from .services import bodygram
+from .services import bodygram, gemini_ai
 
 
 class TryOnFallbackTests(SimpleTestCase):
@@ -153,6 +154,90 @@ class TryOnApiTests(TestCase):
         )
 
         self.assertEqual(response.status_code, 400)
+
+
+class GeminiServiceTests(SimpleTestCase):
+    """Model fallback and input handling for the Gemini client."""
+
+    class _Response:
+        text = '{"advice": "Wear the senator set.", "recommended_ids": ["1"]}'
+
+    class _Models:
+        def __init__(self, failing):
+            self.calls = []
+            self.failing = failing
+
+        def generate_content(self, *, model, contents, config=None):
+            self.calls.append(model)
+            if model in self.failing:
+                raise RuntimeError(self.failing[model])
+            return GeminiServiceTests._Response()
+
+    class _Client:
+        def __init__(self, failing):
+            self.models = GeminiServiceTests._Models(failing)
+
+    catalog = [{"id": "1", "title": "Modern Senator Set"}]
+
+    def _stylist(self):
+        return gemini_ai.generate_stylist_response(
+            message="wedding outfit",
+            occasion="wedding",
+            style="traditional",
+            budget=50000,
+            catalog=self.catalog,
+        )
+
+    @override_settings(
+        GEMINI_TEXT_MODEL="primary-model",
+        GEMINI_TEXT_FALLBACKS=("backup-model",),
+    )
+    def test_overloaded_primary_model_falls_back(self):
+        client = self._Client({"primary-model": "503 UNAVAILABLE. This model is currently experiencing high demand."})
+        with mock.patch.object(gemini_ai, "_client", return_value=client):
+            advice, looks = self._stylist()
+
+        self.assertEqual(client.models.calls, ["primary-model", "backup-model"])
+        self.assertIn("senator", advice.lower())
+        self.assertEqual([item["id"] for item in looks], ["1"])
+
+    @override_settings(
+        GEMINI_TEXT_MODEL="retired-model",
+        GEMINI_TEXT_FALLBACKS=("backup-model",),
+    )
+    def test_unknown_primary_model_does_not_fall_back(self):
+        client = self._Client({"retired-model": "404 NOT_FOUND. This model is no longer available to new users."})
+        with mock.patch.object(gemini_ai, "_client", return_value=client):
+            with self.assertRaises(gemini_ai.GeminiError) as caught:
+                self._stylist()
+
+        self.assertEqual(client.models.calls, ["retired-model"])
+        self.assertIn("unavailable", str(caught.exception).lower())
+
+    def test_local_image_path_is_read(self):
+        directory = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, directory, ignore_errors=True)
+        path = Path(directory) / "person.png"
+        path.write_bytes(b"png-bytes")
+
+        data, mime_type = gemini_ai._image_bytes(str(path), label="person")
+
+        self.assertEqual(data, b"png-bytes")
+        self.assertEqual(mime_type, "image/png")
+
+    @override_settings(GEMINI_IMAGE_MODEL="image-model")
+    def test_image_quota_message_explains_free_tier(self):
+        client = self._Client({"image-model": "429 RESOURCE_EXHAUSTED. quota exceeded, limit: 0"})
+        with mock.patch.object(gemini_ai, "_client", return_value=client):
+            with self.assertRaises(gemini_ai.GeminiError) as caught:
+                gemini_ai.generate_try_on(
+                    person_image=BytesIO(b"person"),
+                    garment_image=BytesIO(b"garment"),
+                    category="one-pieces",
+                )
+
+        self.assertIn("free tier", str(caught.exception).lower())
+
 
 class BodygramServiceTests(SimpleTestCase):
     """Bodygram payload shape and measurement mapping."""

@@ -112,8 +112,18 @@ FILE_UPLOAD_MAX_MEMORY_SIZE = 12 * 1024 * 1024
 FASHN_VTON_SPACE = os.getenv('FASHN_VTON_SPACE', 'fashn-ai/fashn-vton-1.5')
 HF_TOKEN = os.getenv('HF_TOKEN', '')
 GEMINI_API_KEY = os.getenv('GEMINI_API_KEY', '')
-GEMINI_TEXT_MODEL = os.getenv('GEMINI_TEXT_MODEL', 'gemini-3.8-flash')
+GEMINI_TEXT_MODEL = os.getenv('GEMINI_TEXT_MODEL', 'gemini-3.6-flash')
 GEMINI_IMAGE_MODEL = os.getenv('GEMINI_IMAGE_MODEL', 'gemini-3.1-flash-image')
+GEMINI_TEXT_FALLBACKS = tuple(
+    model.strip()
+    for model in os.getenv('GEMINI_TEXT_FALLBACKS', 'gemini-3.5-flash,gemini-3.8-flash').split(',')
+    if model.strip()
+)
+GEMINI_IMAGE_FALLBACKS = tuple(
+    model.strip()
+    for model in os.getenv('GEMINI_IMAGE_FALLBACKS', '').split(',')
+    if model.strip()
+)
 AI_PROVIDER = os.getenv('AI_PROVIDER', 'gemini')
 
 BODYGRAM_ORG_ID = os.getenv('BODYGRAM_ORG_ID', '')
