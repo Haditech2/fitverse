@@ -234,7 +234,7 @@ function bodygramCompositionValue(key, raw){
 }
 
 function clearBodygramResult(){
-  ['#bodygram-composition', '#bodygram-all', '#bodygram-visuals', '#bodygram-saved-photos'].forEach(selector => {
+  ['#bodygram-composition', '#bodygram-all', '#bodygram-visuals', '#bodygram-posture', '#bodygram-saved-photos'].forEach(selector => {
     const el = $(selector);
     if(el){
       if(selector === '#bodygram-composition') el.innerHTML = '';
@@ -243,8 +243,6 @@ function clearBodygramResult(){
   });
   const groups = $('#bodygram-all-groups');
   if(groups) groups.innerHTML = '';
-  const postureRows = $('#bodygram-posture-rows');
-  if(postureRows) postureRows.innerHTML = '';
   if(window.BodygramAvatar) window.BodygramAvatar.destroy();
   try { localStorage.removeItem('fitverse-bodygram-result'); } catch(e){}
 }
@@ -355,17 +353,11 @@ const BODYGRAM_POSTURE_ROWS = [
   { key: 'topHip', label: 'Pelvis tilt', view: 'Front view' },
 ];
 
-function formatPostureAngle(value){
-  if(!Number.isFinite(value)) return null;
-  const rounded = Math.round(value * 10) / 10;
-  return `${rounded > 0 ? '+' : ''}${rounded.toFixed(1)}°`;
-}
-
 function postureTier(value){
   const abs = Math.abs(value);
-  if(abs < 3) return { tone: 'balanced', badgeLabel: 'Balanced' };
-  if(abs < 7) return { tone: 'slight', badgeLabel: 'Slight' };
-  return { tone: 'pronounced', badgeLabel: 'Pronounced' };
+  if(abs < 3) return 'balanced';
+  if(abs < 7) return 'slight';
+  return 'pronounced';
 }
 
 function postureReading(posture){
@@ -377,7 +369,7 @@ function postureReading(posture){
   BODYGRAM_POSTURE_ROWS.forEach(row => {
     if(Number.isFinite(front[row.key])){
       const value = front[row.key];
-      rows.push({ label: row.label, view: row.view, value, ...postureTier(value) });
+      rows.push({ label: row.label, view: row.view, value, tone: postureTier(value) });
     }
   });
 
@@ -385,11 +377,11 @@ function postureReading(posture){
     .find(entry => entry && entry.name === 'bodyLine')?.angles || [];
   if(Number.isFinite(bodyLine[2])){
     const value = bodyLine[2];
-    rows.push({ label: 'Back lean', view: 'Right view', value, ...postureTier(value) });
+    rows.push({ label: 'Back lean', view: 'Right view', value, tone: postureTier(value) });
   }
   if(Number.isFinite(bodyLine[3])){
     const value = bodyLine[3];
-    rows.push({ label: 'Neck lean', view: 'Right view', value, ...postureTier(value) });
+    rows.push({ label: 'Neck lean', view: 'Right view', value, tone: postureTier(value) });
   }
   return rows;
 }
@@ -402,38 +394,22 @@ function postureSummary(rows){
   return `All ${rows.length} lines are within 3° of upright.`;
 }
 
-function renderPosture(posture){
-  const host = $('#bodygram-posture-rows');
+function renderPosture(posture, measurements, heightCm){
   const section = $('#bodygram-posture');
   const summary = $('#bodygram-posture-summary');
-  if(!host || !section) return;
+  if(!section) return;
   const rows = postureReading(posture);
-  host.innerHTML = '';
-  if(summary) summary.textContent = '';
   section.hidden = !rows.length;
-  if(!rows.length){
-    return;
+  if(summary) summary.textContent = rows.length ? postureSummary(rows) : '';
+  if(!rows.length) return;
+  if(window.BodygramAvatar && window.BodygramAvatar.posture){
+    window.BodygramAvatar.posture({
+      front: posture.front || null,
+      right: posture.right || null,
+      measurements: measurements || [],
+      heightCm: Number(heightCm) || 0,
+    });
   }
-  rows.forEach(row => {
-    const item = document.createElement('div');
-    item.className = 'bodygram-posture-row';
-    const head = document.createElement('div');
-    head.className = 'bodygram-posture-row-head';
-    const label = document.createElement('span');
-    label.className = 'bodygram-posture-label';
-    label.textContent = row.label;
-    const badge = document.createElement('span');
-    badge.className = `bodygram-posture-badge is-${row.tone}`;
-    badge.textContent = row.badgeLabel;
-    head.append(label, badge);
-    const value = document.createElement('strong');
-    value.textContent = formatPostureAngle(row.value);
-    const view = document.createElement('small');
-    view.textContent = row.view;
-    item.append(head, value, view);
-    host.append(item);
-  });
-  if(summary) summary.textContent = postureSummary(rows);
 }
 
 function renderBodygramPhotos(frontUrl, rightUrl){
@@ -737,7 +713,7 @@ function renderBodygramResult(result){
   renderBodygramCards(all, Boolean(result.avatar_url));
   renderAllMeasurements(all);
   renderBodygramPhotos(result.front_photo_url, result.right_photo_url);
-  renderPosture(result.posture);
+  renderPosture(result.posture, all, result.height_cm);
   renderBodygramAvatar(result);
   saveLocal('bodygram-result', {
     scan_id: result.scan_id || '',

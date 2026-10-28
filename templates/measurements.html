@@ -108,7 +108,16 @@
       </div>
       <span class="bodygram-visual-note">0° = upright · measured from your photos</span>
     </div>
-    <div id="bodygram-posture-rows" class="bodygram-posture-rows"></div>
+    <div class="bodygram-posture-figures">
+      <figure class="bodygram-posture-figure">
+        <canvas id="bodygram-posture-front" aria-label="Front view posture diagram"></canvas>
+        <figcaption>Front view</figcaption>
+      </figure>
+      <figure class="bodygram-posture-figure">
+        <canvas id="bodygram-posture-side" aria-label="Right-side view posture diagram"></canvas>
+        <figcaption>Right view</figcaption>
+      </figure>
+    </div>
     <p id="bodygram-posture-summary" class="bodygram-posture-summary"></p>
     <small class="bodygram-visual-hint">Measured from your front and right-side photos. Not a medical assessment.</small>
   </section>
@@ -200,5 +209,5 @@
 <script src="{% static 'assets/vendor/three.min.js' %}"></script>
 <script src="{% static 'assets/vendor/OBJLoader.js' %}"></script>
 <script src="{% static 'assets/vendor/OrbitControls.js' %}"></script>
-<script src="{% static 'assets/bodygram-avatar.js' %}?v=14"></script>
+<script src="{% static 'assets/bodygram-avatar.js' %}?v=18"></script>
 {% endblock %}

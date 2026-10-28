@@ -33,6 +33,7 @@
     unitsPerCm: 0,
     thumbCamera: null,
     thumbWaiters: [],
+    shadow: null,
     token: 0,
     lastError: null,
   };
@@ -104,6 +105,7 @@
     shadow.rotation.x = -Math.PI / 2;
     shadow.position.y = 0.002;
     scene.add(shadow);
+    state.shadow = shadow;
 
     state.renderer = renderer;
     state.scene = scene;
@@ -632,6 +634,7 @@
     buildLines(data);
     updateLabels();
     flushThumbnails();
+    if (postureState.options) drawPosturePanes();
   }
 
   /* ---------- labels ---------- */
@@ -835,6 +838,335 @@
     });
   }
 
+  /* ---------- posture analysis panes ---------- */
+
+  const POSTURE_HEAD = '#ef9f2a';
+  const POSTURE_TEAL = '#17a99a';
+  const POSTURE_INK = '#3b2f34';
+  const POSTURE_MUTED = '#8a7c82';
+  const POSTURE_DASH = '#c3b7bd';
+
+  const postureState = {
+    options: null,
+    observer: null,
+    resizeHandler: null,
+  };
+
+  function postureMeasurement(measurements, name) {
+    const entry = (measurements || []).find(item => item && item.name === name);
+    const value = entry ? Number(entry.value) : NaN;
+    return Number.isFinite(value) && value > 0 ? value : null;
+  }
+
+  function postureHeights(heightCm, measurements) {
+    const total = Number(heightCm) || 170;
+    const pick = (name, fallback) => postureMeasurement(measurements, name) || total * fallback;
+    return {
+      head: total * 0.92,
+      shoulder: pick('backNeckHeight', 0.82),
+      pelvis: pick('topHipHeight', 0.545),
+      knee: pick('kneeHeightR', 0.285),
+      ankle: pick('outerAnkleHeightR', 0.045),
+    };
+  }
+
+  function postureCamera(aspect, side) {
+    const half = MODEL_HEIGHT * 0.53;
+    const camera = new THREE.OrthographicCamera(
+      -half * aspect, half * aspect, half, -half, 0.1, 20
+    );
+    const center = MODEL_HEIGHT * 0.5;
+    camera.position.set(side ? -4 : 0, center, side ? 0 : 4);
+    camera.lookAt(0, center, 0);
+    camera.up.set(0, 1, 0);
+    camera.updateProjectionMatrix();
+    camera.updateMatrixWorld();
+    return camera;
+  }
+
+  function postureValue(value) {
+    const rounded = Math.round(Number(value));
+    return Number.isFinite(rounded) ? `${rounded}°` : '';
+  }
+
+  function tintModel(hex) {
+    if (!state.model) return;
+    state.model.traverse(child => {
+      if (child.isMesh && child.material && child.material.color) {
+        child.material.color.setHex(hex);
+      }
+    });
+  }
+
+  function drawPostureLabel(ctx, x, y, name, value, align) {
+    ctx.save();
+    ctx.textAlign = align;
+    ctx.fillStyle = POSTURE_MUTED;
+    ctx.font = '600 11px Inter, "Segoe UI", system-ui, sans-serif';
+    ctx.fillText(name, x, y - 5);
+    ctx.fillStyle = POSTURE_INK;
+    ctx.font = '700 18px Inter, "Segoe UI", system-ui, sans-serif';
+    ctx.fillText(value, x, y + 18);
+    ctx.restore();
+  }
+
+  function drawPostureBackdrop(ctx, width, height, camera, side) {
+    if (side) return;
+    const project = (x, y) => {
+      const vector = new THREE.Vector3(x, y, 0).project(camera);
+      return {
+        x: (vector.x * 0.5 + 0.5) * width,
+        y: (-vector.y * 0.5 + 0.5) * height,
+      };
+    };
+    const top = project(0, MODEL_HEIGHT);
+    const bottom = project(0, 0);
+    ctx.save();
+    ctx.strokeStyle = POSTURE_DASH;
+    ctx.lineWidth = 1;
+    ctx.setLineDash([5, 5]);
+    ctx.beginPath();
+    ctx.moveTo(top.x, Math.max(top.y + 6, 4));
+    ctx.lineTo(bottom.x, Math.min(bottom.y - 4, height - 4));
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function drawPostureFront(ctx, width, height, camera, data, options) {
+    const unitsPerCm = state.unitsPerCm || (MODEL_HEIGHT / (Number(options.heightCm) || 170));
+    const project = (x, y) => {
+      const vector = new THREE.Vector3(x, y, 0).project(camera);
+      return {
+        x: (vector.x * 0.5 + 0.5) * width,
+        y: (-vector.y * 0.5 + 0.5) * height,
+      };
+    };
+    const heights = postureHeights(options.heightCm, options.measurements);
+    const specs = [
+      { name: 'ear', label: 'Head', color: POSTURE_HEAD, height: heights.head, align: 'right', offX: -10 },
+      { name: 'shoulder', label: 'Shoulder', color: POSTURE_TEAL, height: heights.shoulder, align: 'left', offX: 10 },
+      { name: 'topHip', label: 'Pelvis', color: POSTURE_TEAL, height: heights.pelvis, align: 'right', offX: -10 },
+    ];
+    const apiLines = {};
+    ((options.front && options.front.lines) || []).forEach(line => {
+      if (line && line.name) apiLines[line.name] = line.points || [];
+    });
+    const apiAngles = {};
+    ((options.front && options.front.angles) || []).forEach(angle => {
+      if (angle && angle.name) apiAngles[angle.name] = Number(angle.value);
+    });
+
+    specs.forEach(spec => {
+      const yWorld = spec.height * unitsPerCm;
+      const left = surfacePoint(data, yWorld, '', 'outer');
+      const right = surfacePoint(data, yWorld, '', 'right');
+      if (!left || !right) return;
+
+      const a = project(left.x, yWorld);
+      const b = project(right.x, yWorld);
+      const pad = Math.max((b.x - a.x) * 0.18, 6);
+      const x1 = a.x - pad;
+      const x2 = b.x + pad;
+      const mid = (x1 + x2) / 2;
+      const centerY = (a.y + b.y) / 2;
+      const points = apiLines[spec.name] || [];
+      let slope = 0;
+      if (points.length >= 2) {
+        const dx = Number(points[1].x) - Number(points[0].x);
+        const dy = Number(points[1].y) - Number(points[0].y);
+        if (Math.abs(dx) > 1) slope = dy / dx;
+      }
+      const y1 = centerY + (x1 - mid) * slope;
+      const y2 = centerY + (x2 - mid) * slope;
+
+      ctx.save();
+      ctx.strokeStyle = spec.color;
+      ctx.lineWidth = 2;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(x1, y1);
+      ctx.lineTo(x2, y2);
+      ctx.stroke();
+      ctx.restore();
+
+      const endX = spec.align === 'left' ? x2 + spec.offX : x1 + spec.offX;
+      const endY = spec.align === 'left' ? y2 : y1;
+      drawPostureLabel(ctx, endX, endY, spec.label, postureValue(apiAngles[spec.name]), spec.align);
+    });
+  }
+
+  function drawPostureSide(ctx, width, height, camera, data, options) {
+    const unitsPerCm = state.unitsPerCm || (MODEL_HEIGHT / (Number(options.heightCm) || 170));
+    const project = (x, y) => {
+      const vector = new THREE.Vector3(x, y, 0).project(camera);
+      return {
+        x: (vector.x * 0.5 + 0.5) * width,
+        y: (-vector.y * 0.5 + 0.5) * height,
+      };
+    };
+    const heights = postureHeights(options.heightCm, options.measurements);
+    const right = options.right || {};
+    const lineEntry = (right.lines || []).find(line => line && line.name === 'bodyLine');
+    const angleEntry = (right.angles || []).find(angle => angle && angle.name === 'bodyLine');
+    const source = (lineEntry && lineEntry.points) || [];
+    if (source.length < 2) return;
+
+    const xs = source.map(point => Number(point.x));
+    const ys = source.map(point => Number(point.y));
+    const spanY = Math.max(Math.max(...ys) - Math.min(...ys), 1);
+    const meanX = xs.reduce((sum, value) => sum + value, 0) / xs.length;
+
+    const headTop = project(0, heights.head * unitsPerCm);
+    const anklePoint = project(0, heights.ankle * unitsPerCm);
+    const bodyPx = Math.max(anklePoint.y - headTop.y, 1);
+    const centerX = headTop.x;
+
+    const screen = source.map(point => {
+      const fraction = (Math.max(...ys) - Number(point.y)) / spanY;
+      return {
+        x: centerX + ((Number(point.x) - meanX) / spanY) * bodyPx,
+        y: anklePoint.y - fraction * bodyPx,
+      };
+    });
+
+    ctx.save();
+    ctx.strokeStyle = POSTURE_DASH;
+    ctx.lineWidth = 1;
+    ctx.setLineDash([4, 4]);
+    [0, 1, 2, 4].forEach(index => {
+      const point = screen[index];
+      if (!point) return;
+      ctx.beginPath();
+      ctx.moveTo(point.x - 46, point.y);
+      ctx.lineTo(point.x - 10, point.y);
+      ctx.stroke();
+    });
+    ctx.restore();
+
+    ctx.save();
+    ctx.strokeStyle = POSTURE_INK;
+    ctx.lineWidth = 1.6;
+    ctx.lineJoin = 'round';
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    screen.forEach((point, index) => {
+      if (index === 0) ctx.moveTo(point.x, point.y);
+      else ctx.lineTo(point.x, point.y);
+    });
+    ctx.stroke();
+    screen.forEach(point => {
+      ctx.beginPath();
+      ctx.arc(point.x, point.y, 3.6, 0, Math.PI * 2);
+      ctx.fillStyle = '#fff';
+      ctx.fill();
+      ctx.strokeStyle = POSTURE_INK;
+      ctx.lineWidth = 1.4;
+      ctx.stroke();
+    });
+    ctx.restore();
+
+    const angles = (angleEntry && angleEntry.angles) || [];
+    const neck = screen[3] || screen[screen.length - 1];
+    const hip = screen[2] || screen[0];
+    const shoulder = screen[3] || screen[screen.length - 1];
+    const backX = (hip.x + shoulder.x) / 2;
+    const backY = (hip.y + shoulder.y) / 2;
+    drawPostureLabel(ctx, neck.x + 18, neck.y - 2, 'Neck', postureValue(angles[3]), 'left');
+    drawPostureLabel(ctx, backX + 18, backY + 8, 'Back', postureValue(angles[2]), 'left');
+  }
+
+  function paintPosturePane(canvas, side, data) {
+    if (!canvas || !state.renderer || !state.model) return;
+    const stage = stageElement();
+    if (!stage) return;
+
+    const cssW = Math.max(canvas.clientWidth, 140);
+    const cssH = Math.max(canvas.clientHeight, 140);
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const targetW = Math.round(cssW * dpr);
+    const targetH = Math.round(cssH * dpr);
+    if (canvas.width !== targetW) canvas.width = targetW;
+    if (canvas.height !== targetH) canvas.height = targetH;
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, cssW, cssH);
+
+    const ratio = state.renderer.getPixelRatio();
+    const stageW = Math.max(stage.clientWidth, 1);
+    const stageH = Math.max(stage.clientHeight, 1);
+
+    const visibility = state.bandEntries.map(entry => entry.mesh.visible);
+    state.bandEntries.forEach(entry => { entry.mesh.visible = false; });
+    const shadowVisible = state.shadow ? state.shadow.visible : null;
+    if (state.shadow) state.shadow.visible = false;
+    tintModel(0xc9c3c6);
+
+    const camera = postureCamera(cssW / cssH, side);
+    drawPostureBackdrop(ctx, cssW, cssH, camera, side);
+
+    state.renderer.setSize(cssW, cssH, false);
+    state.renderer.setScissorTest(false);
+    state.renderer.setViewport(0, 0, cssW, cssH);
+    state.renderer.render(state.scene, camera);
+    ctx.drawImage(
+      state.renderer.domElement,
+      0, 0, cssW * ratio, cssH * ratio,
+      0, 0, cssW, cssH
+    );
+
+    state.renderer.setSize(stageW, stageH, false);
+    state.renderer.setViewport(0, 0, stageW, stageH);
+    state.renderer.render(state.scene, state.camera);
+    tintModel(0xc98fa9);
+    if (state.shadow && shadowVisible !== null) state.shadow.visible = shadowVisible;
+    state.bandEntries.forEach((entry, index) => { entry.mesh.visible = visibility[index]; });
+
+    drawPosturePanesOverlay(ctx, cssW, cssH, camera, data, side, postureState.options || {});
+  }
+
+  function drawPosturePanesOverlay(ctx, width, height, camera, data, side, options) {
+    if (side) drawPostureSide(ctx, width, height, camera, data, options);
+    else drawPostureFront(ctx, width, height, camera, data, options);
+  }
+
+  function drawPosturePanes() {
+    const options = postureState.options;
+    if (!options || !state.model) return false;
+    const data = meshDataFor(state.model);
+    if (!data) return false;
+    paintPosturePane(document.getElementById('bodygram-posture-front'), false, data);
+    paintPosturePane(document.getElementById('bodygram-posture-side'), true, data);
+    return true;
+  }
+
+  function watchPosturePanes() {
+    if (!postureState.resizeHandler) {
+      postureState.resizeHandler = () => {
+        if (postureState.options && state.model) drawPosturePanes();
+      };
+      window.addEventListener('resize', postureState.resizeHandler);
+    }
+    if (typeof ResizeObserver === 'undefined' || postureState.observer) return;
+    const panes = [
+      document.getElementById('bodygram-posture-front'),
+      document.getElementById('bodygram-posture-side'),
+    ].filter(Boolean);
+    if (!panes.length) return;
+    postureState.observer = new ResizeObserver(() => {
+      if (postureState.options && state.model) drawPosturePanes();
+    });
+    panes.forEach(pane => postureState.observer.observe(pane));
+  }
+
+  function posture(options) {
+    postureState.options = options && options.front ? options : null;
+    if (!postureState.options) return false;
+    watchPosturePanes();
+    return drawPosturePanes();
+  }
+
   /* ---------- public API ---------- */
 
   function load(url, options) {
@@ -902,6 +1234,15 @@
   function destroy() {
     state.token += 1;
     state.url = '';
+    if (postureState.observer) {
+      postureState.observer.disconnect();
+      postureState.observer = null;
+    }
+    if (postureState.resizeHandler) {
+      window.removeEventListener('resize', postureState.resizeHandler);
+      postureState.resizeHandler = null;
+    }
+    postureState.options = null;
     disposeModel();
     const pending = state.thumbWaiters.splice(0);
     pending.forEach(request => request.resolve({}));
@@ -942,11 +1283,12 @@
       bands: state.bandEntries.map(band => ({ label: band.label, value: band.value, visible: band.mesh.visible })),
       lines: state.lineEntries.map(line => ({ label: line.label, value: line.value })),
       labels: state.labels.length,
+      posture: Boolean(postureState.options),
       camera: state.camera ? state.camera.position.toArray() : null,
       error: state.lastError || null,
     };
   }
 
-  window.BodygramAvatar = { load, reset, destroy, info, renderNow, thumbnails };
+  window.BodygramAvatar = { load, reset, destroy, info, renderNow, thumbnails, posture };
   window.resetBodygramAvatar = reset;
 })();

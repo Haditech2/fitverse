@@ -75,7 +75,11 @@ scroll to zoom, **Reset view**) using a locally vendored three.js r147 build —
 request. The avatar is sliced around the bust, waist, hip, upper arm, thigh, and calf,
 and each slice becomes a teal girth band labelled with its measured value on a dashed
 leader line, mirroring Bodygram's own scan view. The page also shows head, shoulder,
-and pelvis tilt from the front photo plus back and neck lean from the side photo. The
+and pelvis tilt from the front photo plus back and neck lean from the side photo, as a
+**Posture analysis** section with two static body figures: a front elevation with tilted
+head/shoulder/pelvis lines and a centre guide, and a right-side elevation with the
+Bodygram body line, joint dots, and reference stubs. The figures are rendered from the
+same `.obj` model in neutral grey, and the values stay as Bodygram returned them. The
 model and posture are stored with the scan, so they reappear after a reload. The avatar
 is saved once per scan and shared across profiles.
 

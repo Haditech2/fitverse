@@ -114,19 +114,14 @@
 .bodygram-posture[hidden]{display:none}
 .bodygram-posture-head{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap;margin-bottom:14px}
 .bodygram-posture-head h4{margin:4px 0 0;font-size:18px;letter-spacing:-.01em}
-.bodygram-posture-rows{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px}
-.bodygram-posture-row{display:grid;gap:4px;padding:11px 12px;border-radius:9px;background:#fff;border:1px solid #f0e3ea}
-.bodygram-posture-row-head{display:flex;justify-content:space-between;align-items:center;gap:8px}
-.bodygram-posture-label{font-size:11px;letter-spacing:.04em;text-transform:uppercase;color:#8a7c82}
-.bodygram-posture-row strong{font-size:22px;font-weight:600;color:#3b2f34;font-variant-numeric:tabular-nums}
-.bodygram-posture-row small{font-size:10px;color:#8a7c82}
-.bodygram-posture-badge{font-size:9px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:2px 6px;border-radius:999px;border:1px solid transparent}
-.bodygram-posture-badge.is-balanced{background:#e8f4ee;color:#2f6d4f;border-color:#cfe6da}
-.bodygram-posture-badge.is-slight{background:#fdf1e3;color:#8a5a1f;border-color:#f0dcc0}
-.bodygram-posture-badge.is-pronounced{background:#f8e7e7;color:#8f2f2f;border-color:#efd0d0}
+.bodygram-posture-figures{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.bodygram-posture-figure{margin:0;padding:8px;border:1px solid #efe3e9;border-radius:12px;background:#f7f4f5}
+.bodygram-posture-figure canvas{display:block;width:100%;height:auto;aspect-ratio:4 / 5}
+.bodygram-posture-figure figcaption{margin-top:2px;text-align:center;font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:#8a7c82}
 .bodygram-posture-summary{margin:10px 0 0;font-size:12px;color:#5c4c53}
 .bodygram-posture-summary:empty{display:none}
-@media (max-width:760px){.bodygram-avatar-stage{height:300px}.bodygram-posture-rows{grid-template-columns:repeat(auto-fit,minmax(128px,1fr))}}
+@media (max-width:760px){.bodygram-avatar-stage{height:300px}}
+@media (max-width:640px){.bodygram-posture-figures{grid-template-columns:1fr}}
 .tryon-result-column{min-width:0}
 .tryon-result-header{display:flex;justify-content:space-between;align-items:start;margin-bottom:13px}
 .tryon-result-header h3{margin:4px 0 0;font-size:22px}
