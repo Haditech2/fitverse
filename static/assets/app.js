@@ -940,10 +940,23 @@ function selectTryonDesign(button){
   if(preview){
     preview.src = button.dataset.designImage;
     preview.style.display = 'block';
+    preview.closest('.tryon-upload-card')?.classList.add('has-image');
   }
   const name = $('#dedicated-garment-name');
   if(name) name.textContent = button.querySelector('span')?.textContent || 'Catalog garment selected';
+  updateDedicatedTryonState();
   toast('Garment selected for virtual try-on.');
+}
+
+function updateDedicatedTryonState(){
+  const person = dedicatedPersonFile || $('#dedicated-person-upload')?.files?.[0];
+  const garment = dedicatedGarmentFile || $('#dedicated-garment-upload')?.files?.[0] || dedicatedTryonDesign;
+  const ready = Boolean(person && garment);
+  const button = $('#dedicated-generate');
+  if(!button) return;
+  button.classList.toggle('is-ready', ready);
+  const label = button.querySelector('.tryon-generate-label');
+  if(label) label.textContent = ready ? 'Generate try-on' : 'Add both photos to generate';
 }
 
 function runDedicatedTryOn(){
@@ -977,7 +990,7 @@ function runDedicatedTryOn(){
   else formData.append('garment_image_url', garmentUrl);
 
   if(status){
-    status.textContent = 'Rendering your look with FASHN VTON 1.5. This can take up to a minute...';
+    status.textContent = 'Rendering your look. This can take up to a minute...';
     status.style.display = 'block';
   }
   $('#dedicated-vton-loader')?.style.setProperty('display', 'flex');
@@ -992,9 +1005,8 @@ function runDedicatedTryOn(){
       if(preview){
         preview.src = data.result_image;
         preview.style.display = 'block';
+        preview.hidden = false;
       }
-      $('#tryon-stage-label').textContent = 'Generated result';
-      $('.tryon-result-copy')?.style.setProperty('display', 'none');
       if(status){
         const engine = data.provider === 'gemini' ? 'Gemini' : 'FASHN VTON 1.5';
         status.textContent = `Your generated look is ready (${engine}).`;
@@ -1365,12 +1377,16 @@ function setupStudioEvents(){
       dedicatedPersonFile = file;
       const objectUrl = URL.createObjectURL(file);
       const preview = $('#user-photo-preview');
-      if(preview) preview.src = objectUrl;
+      if(preview){ preview.src = objectUrl; preview.style.display = 'block'; preview.hidden = false; }
       const cardPreview = $('#dedicated-person-card-preview');
-      if(cardPreview){ cardPreview.src = objectUrl; cardPreview.style.display = 'block'; }
+      if(cardPreview){
+        cardPreview.src = objectUrl;
+        cardPreview.style.display = 'block';
+        cardPreview.closest('.tryon-upload-card')?.classList.add('has-image');
+      }
       const cardName = $('#dedicated-person-name');
       if(cardName) cardName.textContent = file.name;
-      $('#tryon-stage-label').textContent = 'Your photo';
+      updateDedicatedTryonState();
       toast('Person photo loaded.');
     });
   }
@@ -1385,12 +1401,46 @@ function setupStudioEvents(){
       const status = $('#dedicated-garment-status');
       if(status) status.textContent = `${file.name} selected. It will replace the catalog garment.`;
       const preview = $('#dedicated-garment-card-preview');
-      if(preview){ preview.src = URL.createObjectURL(file); preview.style.display = 'block'; }
+      if(preview){
+        preview.src = URL.createObjectURL(file);
+        preview.style.display = 'block';
+        preview.closest('.tryon-upload-card')?.classList.add('has-image');
+      }
       const name = $('#dedicated-garment-name');
       if(name) name.textContent = file.name;
+      updateDedicatedTryonState();
       toast('Custom garment loaded.');
     });
   }
+
+  $$('.tryon-upload-card[data-drop]').forEach(card => {
+    const input = card.querySelector('input[type="file"]');
+    if(!input) return;
+    const stop = event => { event.preventDefault(); event.stopPropagation(); };
+    ['dragenter', 'dragover'].forEach(type => {
+      card.addEventListener(type, event => {
+        stop(event);
+        card.classList.add('is-dragging');
+      });
+    });
+    ['dragleave', 'dragend'].forEach(type => {
+      card.addEventListener(type, event => {
+        stop(event);
+        if(!card.contains(event.relatedTarget)) card.classList.remove('is-dragging');
+      });
+    });
+    card.addEventListener('drop', event => {
+      stop(event);
+      card.classList.remove('is-dragging');
+      const file = [...(event.dataTransfer?.files || [])].find(item => item.type.startsWith('image/'));
+      if(!file) return toast('Drop an image file to continue.');
+      if(file.size > 12 * 1024 * 1024) return toast('Choose an image smaller than 12 MB.');
+      const transfer = new DataTransfer();
+      transfer.items.add(file);
+      input.files = transfer.files;
+      input.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+  });
 
   $('#btn-run-tryon')?.addEventListener('click', runVTONTryOn);
 
@@ -1460,6 +1510,7 @@ document.addEventListener('click', e => {
 document.addEventListener('DOMContentLoaded', () => {
   loadMeasurements();
   loadBodygramResult();
+  updateDedicatedTryonState();
 
   const favs = readLocal('favorites', []);
   $$('[data-favorite]').forEach(b => {

@@ -1,0 +1,554 @@
+/* Apple-inspired virtual try-on page.
+ * Neutral surfaces, translucent layers, spring-like press feedback and
+ * system typography, scoped to .tryon-apple so the rest of the app is unchanged.
+ */
+
+.tryon-apple {
+  --tn-bg: #f5f5f7;
+  --tn-card: #ffffff;
+  --tn-ink: #1d1d1f;
+  --tn-muted: #6e6e73;
+  --tn-line: rgba(0, 0, 0, 0.08);
+  --tn-accent: #6d3658;
+  --tn-accent-soft: rgba(109, 54, 88, 0.08);
+  --tn-ease: cubic-bezier(0.22, 0.61, 0.36, 1);
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: clamp(24px, 3.6vw, 52px);
+  border-radius: 32px;
+  background: var(--tn-bg);
+  color: var(--tn-ink);
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI Variable Text",
+    "Segoe UI", system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+.tryon-apple :focus-visible {
+  outline: 2px solid var(--tn-accent);
+  outline-offset: 3px;
+}
+
+.tryon-apple .tryon-stage-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.02fr) minmax(0, 0.98fr);
+  gap: clamp(28px, 4vw, 56px);
+  align-items: start;
+}
+
+/* ---------- copy ---------- */
+
+.tryon-eyebrow {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--tn-accent);
+}
+
+.tryon-apple h2 {
+  margin: 12px 0 14px;
+  font-family: inherit;
+  font-size: clamp(2.15rem, 3.5vw, 3.35rem);
+  font-weight: 700;
+  line-height: 1.04;
+  letter-spacing: -0.035em;
+  color: var(--tn-ink);
+}
+
+.tryon-apple h2 span {
+  color: var(--tn-muted);
+}
+
+.tryon-lead {
+  max-width: 46ch;
+  margin: 0 0 26px;
+  font-size: 16px;
+  line-height: 1.5;
+  color: var(--tn-muted);
+}
+
+/* ---------- upload tiles ---------- */
+
+.tryon-apple .tryon-upload-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.tryon-apple .tryon-upload-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  height: 232px;
+  margin: 0;
+  padding: 20px;
+  overflow: hidden;
+  text-align: center;
+  cursor: pointer;
+  border: 1px solid var(--tn-line);
+  border-radius: 22px;
+  background: var(--tn-card);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  transition: transform 0.28s var(--tn-ease), box-shadow 0.28s var(--tn-ease),
+    border-color 0.2s var(--tn-ease), background-color 0.2s var(--tn-ease);
+}
+
+.tryon-apple .tryon-upload-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(0, 0, 0, 0.16);
+  box-shadow: 0 14px 28px rgba(0, 0, 0, 0.08);
+}
+
+.tryon-apple .tryon-upload-card:active {
+  transform: scale(0.985);
+  transition-duration: 0.12s;
+}
+
+.tryon-apple .tryon-upload-card.is-dragging {
+  border-color: var(--tn-accent);
+  background: #fff;
+  box-shadow: 0 0 0 4px var(--tn-accent-soft);
+}
+
+.tryon-apple .tryon-upload-card input {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: block;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  border: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.tryon-apple .tryon-upload-card:focus-within {
+  outline: 2px solid var(--tn-accent);
+  outline-offset: 3px;
+}
+
+.tryon-step {
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  width: 22px;
+  height: 22px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.06);
+  color: var(--tn-muted);
+  font-size: 11px;
+  font-weight: 600;
+  transition: opacity 0.2s var(--tn-ease);
+}
+
+.tryon-tile-icon {
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  margin-bottom: 2px;
+  border-radius: 14px;
+  background: var(--tn-accent-soft);
+  color: var(--tn-accent);
+  transition: opacity 0.2s var(--tn-ease), transform 0.28s var(--tn-ease);
+}
+
+.tryon-tile-icon svg {
+  width: 22px;
+  height: 22px;
+}
+
+.tryon-tile-copy {
+  display: block;
+  max-width: 100%;
+  transition: opacity 0.2s var(--tn-ease);
+}
+
+.tryon-tile-copy strong {
+  display: block;
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--tn-ink);
+}
+
+.tryon-tile-copy small {
+  display: block;
+  margin-top: 3px;
+  overflow: hidden;
+  color: var(--tn-muted);
+  font-size: 12px;
+  line-height: 1.4;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tryon-upload-card img {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: none;
+}
+
+.tryon-upload-card.has-image img {
+  display: block;
+}
+
+.tryon-upload-card.has-image .tryon-tile-icon {
+  opacity: 0;
+  transform: scale(0.9);
+}
+
+.tryon-upload-card.has-image .tryon-step {
+  z-index: 3;
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(16px) saturate(180%);
+  -webkit-backdrop-filter: blur(16px) saturate(180%);
+  color: var(--tn-ink);
+}
+
+.tryon-upload-card.has-image .tryon-tile-copy {
+  position: absolute;
+  right: 10px;
+  bottom: 10px;
+  left: 10px;
+  z-index: 3;
+  padding: 8px 12px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  text-align: left;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.55);
+}
+
+.tryon-upload-card.has-image .tryon-tile-copy strong {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.tryon-upload-card.has-image .tryon-tile-copy small {
+  margin-top: 1px;
+  font-size: 10px;
+}
+
+.tryon-tile-check {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  z-index: 3;
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--tn-ink);
+  color: #fff;
+  opacity: 0;
+  transform: scale(0.7);
+  transition: opacity 0.2s var(--tn-ease), transform 0.28s var(--tn-ease);
+}
+
+.tryon-tile-check svg {
+  width: 12px;
+  height: 12px;
+}
+
+.tryon-upload-card.has-image .tryon-tile-check {
+  opacity: 1;
+  transform: scale(1);
+}
+
+/* ---------- hint, action, status ---------- */
+
+.tryon-apple .tryon-hint {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 14px 0 12px;
+  padding: 10px 14px;
+  border-radius: 14px;
+  background: rgba(0, 0, 0, 0.04);
+  color: var(--tn-muted);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.tryon-apple .tryon-hint::before {
+  content: "";
+  flex: 0 0 auto;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--tn-accent);
+}
+
+.tryon-apple .tryon-generate {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 15px 22px;
+  border: 0;
+  border-radius: 980px;
+  background: #e8e8ed;
+  color: var(--tn-muted);
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  transition: background-color 0.25s var(--tn-ease), color 0.2s var(--tn-ease),
+    box-shadow 0.25s var(--tn-ease), transform 0.12s var(--tn-ease);
+}
+
+.tryon-generate-arrow {
+  width: 16px;
+  height: 16px;
+  opacity: 0.4;
+  transition: transform 0.25s var(--tn-ease), opacity 0.2s var(--tn-ease);
+}
+
+.tryon-apple .tryon-generate:hover {
+  background: #dededf;
+}
+
+.tryon-apple .tryon-generate:active {
+  transform: scale(0.975);
+}
+
+.tryon-apple .tryon-generate.is-ready {
+  background: var(--tn-ink);
+  color: #fff;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.18);
+}
+
+.tryon-apple .tryon-generate.is-ready:hover {
+  background: #000;
+}
+
+.tryon-apple .tryon-generate.is-ready .tryon-generate-arrow {
+  opacity: 1;
+  transform: translateX(2px);
+}
+
+.tryon-apple .tryon-status {
+  margin-top: 12px;
+  padding: 11px 14px;
+  border: 0;
+  border-radius: 14px;
+  background: rgba(0, 0, 0, 0.04);
+  color: var(--tn-muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.tryon-apple .tryon-status.is-error {
+  background: rgba(255, 59, 48, 0.08);
+  color: #b3261e;
+  box-shadow: inset 0 0 0 1px rgba(255, 59, 48, 0.18);
+}
+
+.tryon-apple .tryon-status.is-success {
+  background: rgba(52, 199, 89, 0.1);
+  color: #1c6b35;
+  box-shadow: inset 0 0 0 1px rgba(52, 199, 89, 0.22);
+}
+
+.tryon-apple .tryon-trust {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+  margin: 18px 0 0;
+  padding: 14px 0 0;
+  border-top: 1px solid var(--tn-line);
+  list-style: none;
+  color: var(--tn-muted);
+  font-size: 12px;
+}
+
+.tryon-apple .tryon-trust li {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.tryon-apple .tryon-trust li::before {
+  content: "";
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.28);
+}
+
+/* ---------- preview ---------- */
+
+.tryon-apple .tryon-preview {
+  position: relative;
+  min-height: 560px;
+}
+
+.tryon-preview-main {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  border-radius: 28px;
+  background: linear-gradient(165deg, #ececf1 0%, #e2e2e8 100%);
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.05), 0 18px 40px rgba(0, 0, 0, 0.1);
+}
+
+.tryon-preview-main > img {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* ---------- loading overlay ---------- */
+
+.tryon-apple .preview-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 24px;
+  text-align: center;
+  color: #fff;
+  background: rgba(29, 29, 31, 0.6);
+  backdrop-filter: blur(24px) saturate(140%);
+  -webkit-backdrop-filter: blur(24px) saturate(140%);
+  animation: tn-materialize 0.36s var(--tn-ease) both;
+}
+
+.tryon-apple .preview-overlay strong {
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.tryon-apple .preview-overlay small {
+  max-width: 26ch;
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.tryon-apple .spinner {
+  width: 26px;
+  height: 26px;
+  margin-bottom: 4px;
+  border: 2px solid rgba(255, 255, 255, 0.24);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes tn-materialize {
+  from {
+    opacity: 0;
+    transform: scale(0.99);
+    backdrop-filter: blur(4px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* ---------- responsive ---------- */
+
+@media (max-width: 1100px) {
+  .tryon-apple .tryon-stage-grid {
+    grid-template-columns: 1fr;
+    gap: 32px;
+  }
+
+  .tryon-apple .tryon-preview {
+    min-height: 500px;
+  }
+}
+
+@media (max-width: 720px) {
+  .tryon-apple {
+    padding: 22px 18px 26px;
+    border-radius: 24px;
+  }
+
+  .tryon-apple .tryon-upload-grid {
+    gap: 10px;
+  }
+
+  .tryon-apple .tryon-upload-card {
+    height: 200px;
+    padding: 16px;
+  }
+
+  .tryon-apple .tryon-preview {
+    min-height: 400px;
+  }
+
+  .tryon-preview-main {
+    border-radius: 24px;
+  }
+}
+
+@media (max-width: 420px) {
+  .tryon-apple .tryon-upload-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .tryon-apple .tryon-upload-card {
+    height: 176px;
+  }
+
+  .tryon-apple .tryon-preview {
+    min-height: 340px;
+  }
+}
+
+/* ---------- preferences ---------- */
+
+@media (prefers-reduced-motion: reduce) {
+  .tryon-apple *,
+  .tryon-apple *::before,
+  .tryon-apple *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+
+  .tryon-apple .tryon-upload-card:hover,
+  .tryon-apple .tryon-generate:active {
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .tryon-upload-card.has-image .tryon-tile-copy,
+  .tryon-upload-card.has-image .tryon-step {
+    background: #fff;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+
+  .tryon-apple .preview-overlay {
+    background: rgba(29, 29, 31, 0.92);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+}
