@@ -7,7 +7,8 @@
   <meta name="theme-color" content="#542642">
   <meta name="description" content="Fitverse AI helps you discover designs, preview outfits with FASHN VTON 1.5, understand your fit, and find your personal style.">
   <title>Fitverse AI — Your style. Your fit.</title>
-  <link rel="stylesheet" href="{% static 'assets/styles.css' %}">
+  <link rel="stylesheet" href="{% static 'assets/styles.css' %}?v=10">
+  <link rel="stylesheet" href="{% static 'assets/theme.css' %}?v=5">
 </head>
 <body>
   <!-- Public Site Header -->
@@ -216,7 +217,7 @@
     </div>
   </footer>
 
-  <div id="toast" class="toast"></div>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
   <script src="{% static 'assets/app.js' %}"></script>
 </body>
 </html>
