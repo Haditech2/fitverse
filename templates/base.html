@@ -6,11 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#542642">
   <title>{% block title %}Fitverse AI — Intelligent Fashion & Virtual Try-On{% endblock %}</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,opsz,wght@0,6..96,400..700;1,6..96,400..700&family=Inter:wght@300..600&display=swap">
-  <link rel="stylesheet" href="{% static 'assets/styles.css' %}?v=10">
-  <link rel="stylesheet" href="{% static 'assets/theme.css' %}?v=11">
+  <link rel="stylesheet" href="{% static 'assets/styles.css' %}?v=9">
   {% block extra_head %}{% endblock %}
 </head>
 <body>
@@ -21,13 +17,13 @@
       <div>
         <div class="side-label">Workspace</div>
         <nav class="side-nav">
-          <a class="{% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}" href="{% url 'dashboard' %}"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 10.5 12 4l8 6.5V20a1 1 0 0 1-1 1h-4.5v-6h-5v6H5a1 1 0 0 1-1-1z"/></svg></span>Home</a>
-          <a class="{% if request.resolver_match.url_name == 'designs' or request.resolver_match.url_name == 'design_detail' %}active{% endif %}" href="{% url 'designs' %}"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="4" width="7" height="7" rx="1.8"/><rect x="13" y="4" width="7" height="7" rx="1.8"/><rect x="4" y="13" width="7" height="7" rx="1.8"/><rect x="13" y="13" width="7" height="7" rx="1.8"/></svg></span>Discover Designs</a>
-          <a class="{% if request.resolver_match.url_name == 'tryon' %}active{% endif %}" href="{% url 'tryon' %}"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 9a2.2 2.2 0 1 1 2.2-2.2"/><path d="M12 9v2.2L3.7 16.9A1.2 1.2 0 0 0 4.4 19h15.2a1.2 1.2 0 0 0 .7-2.1L12 11.2"/></svg></span>Virtual Try-On</a>
-          <a class="{% if request.resolver_match.url_name == 'measurements' %}active{% endif %}" href="{% url 'measurements' %}"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 12h17"/><path d="M6.5 9 3.5 12l3 3"/><path d="M17.5 9l3 3-3 3"/></svg></span>My Measurements</a>
-          <a class="{% if request.resolver_match.url_name == 'style_intelligence' %}active{% endif %}" href="{% url 'style_intelligence' %}"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3.5 13.9 9l5.6 1.9-5.6 1.9L12 18.4l-1.9-5.6L4.5 10.9 10.1 9z"/><path d="M18.6 3.4v3.2M20.2 5h-3.2"/></svg></span>Style Intelligence</a>
-          <a class="{% if request.resolver_match.url_name == 'wardrobe' %}active{% endif %}" href="{% url 'wardrobe' %}"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20.2S4.8 15.6 4.8 10.6A4.1 4.1 0 0 1 12 8a4.1 4.1 0 0 1 7.2 2.6c0 5-7.2 9.6-7.2 9.6z"/></svg></span>My Wardrobe</a>
-          <a class="{% if request.resolver_match.url_name == 'profile' %}active{% endif %}" href="{% url 'profile' %}"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8.6" r="3.6"/><path d="M4.9 20c.7-3.7 3.6-5.7 7.1-5.7s6.4 2 7.1 5.7"/></svg></span>Profile &amp; Settings</a>
+          <a class="{% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}" href="{% url 'dashboard' %}"><span>⌂</span>Home</a>
+          <a class="{% if request.resolver_match.url_name == 'designs' or request.resolver_match.url_name == 'design_detail' %}active{% endif %}" href="{% url 'designs' %}"><span>▦</span>Discover Designs</a>
+          <a class="{% if request.resolver_match.url_name == 'tryon' %}active{% endif %}" href="{% url 'tryon' %}"><span>◉</span>Virtual Try-On</a>
+          <a class="{% if request.resolver_match.url_name == 'measurements' %}active{% endif %}" href="{% url 'measurements' %}"><span>↔</span>My Measurements</a>
+          <a class="{% if request.resolver_match.url_name == 'style_intelligence' %}active{% endif %}" href="{% url 'style_intelligence' %}"><span>✳</span>Style Intelligence</a>
+          <a class="{% if request.resolver_match.url_name == 'wardrobe' %}active{% endif %}" href="{% url 'wardrobe' %}"><span>♡</span>My Wardrobe</a>
+          <a class="{% if request.resolver_match.url_name == 'profile' %}active{% endif %}" href="{% url 'profile' %}"><span>○</span>Profile & Settings</a>
         </nav>
       </div>
       <div class="sidebar-bottom">
@@ -58,18 +54,17 @@
   </div>
 
   <nav class="mobile-bottom">
-    <a class="{% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}" href="{% url 'dashboard' %}"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 10.5 12 4l8 6.5V20a1 1 0 0 1-1 1h-4.5v-6h-5v6H5a1 1 0 0 1-1-1z"/></svg></span><span>Home</span></a>
-    <a class="{% if request.resolver_match.url_name == 'designs' or request.resolver_match.url_name == 'design_detail' %}active{% endif %}" href="{% url 'designs' %}"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="4" width="7" height="7" rx="1.8"/><rect x="13" y="4" width="7" height="7" rx="1.8"/><rect x="4" y="13" width="7" height="7" rx="1.8"/><rect x="13" y="13" width="7" height="7" rx="1.8"/></svg></span><span>Designs</span></a>
-    <a class="{% if request.resolver_match.url_name == 'tryon' %}active{% endif %}" href="{% url 'tryon' %}"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 9a2.2 2.2 0 1 1 2.2-2.2"/><path d="M12 9v2.2L3.7 16.9A1.2 1.2 0 0 0 4.4 19h15.2a1.2 1.2 0 0 0 .7-2.1L12 11.2"/></svg></span><span>Try-On</span></a>
-    <a class="{% if request.resolver_match.url_name == 'measurements' %}active{% endif %}" href="{% url 'measurements' %}"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 12h17"/><path d="M6.5 9 3.5 12l3 3"/><path d="M17.5 9l3 3-3 3"/></svg></span><span>Fit</span></a>
-    <a class="{% if request.resolver_match.url_name == 'style_intelligence' %}active{% endif %}" href="{% url 'style_intelligence' %}"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3.5 13.9 9l5.6 1.9-5.6 1.9L12 18.4l-1.9-5.6L4.5 10.9 10.1 9z"/></svg></span><span>Stylist</span></a>
-    <a class="{% if request.resolver_match.url_name == 'wardrobe' %}active{% endif %}" href="{% url 'wardrobe' %}"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20.2S4.8 15.6 4.8 10.6A4.1 4.1 0 0 1 12 8a4.1 4.1 0 0 1 7.2 2.6c0 5-7.2 9.6-7.2 9.6z"/></svg></span><span>Wardrobe</span></a>
-    <a class="{% if request.resolver_match.url_name == 'profile' %}active{% endif %}" href="{% url 'profile' %}"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8.6" r="3.6"/><path d="M4.9 20c.7-3.7 3.6-5.7 7.1-5.7s6.4 2 7.1 5.7"/></svg></span><span>Profile</span></a>
+    <a class="{% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}" href="{% url 'dashboard' %}"><span>⌂</span><span>Home</span></a>
+    <a class="{% if request.resolver_match.url_name == 'designs' %}active{% endif %}" href="{% url 'designs' %}"><span>▦</span><span>Designs</span></a>
+    <a class="{% if request.resolver_match.url_name == 'tryon' %}active{% endif %}" href="{% url 'tryon' %}"><span>◉</span><span>Try-On</span></a>
+    <a class="{% if request.resolver_match.url_name == 'style_intelligence' %}active{% endif %}" href="{% url 'style_intelligence' %}"><span>✳</span><span>Stylist</span></a>
+    <a class="{% if request.resolver_match.url_name == 'wardrobe' %}active{% endif %}" href="{% url 'wardrobe' %}"><span>♡</span><span>Wardrobe</span></a>
+    <a class="{% if request.resolver_match.url_name == 'profile' %}active{% endif %}" href="{% url 'profile' %}"><span>○</span><span>Profile</span></a>
   </nav>
   {% endblock body %}
 
-  <div id="toast" class="toast" role="status" aria-live="polite"></div>
-  <script src="{% static 'assets/app.js' %}?v=10"></script>
+  <div id="toast" class="toast"></div>
+  <script src="{% static 'assets/app.js' %}?v=7"></script>
   {% block extra_scripts %}{% endblock %}
 </body>
 </html>

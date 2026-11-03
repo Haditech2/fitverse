@@ -6,7 +6,7 @@
 {% block content %}
 <section class="dashboard-hero">
   <div class="dashboard-hero-copy">
-    <div class="eyebrow">The Fitverse edit</div>
+    <div class="eyebrow" style="color:#e9c7d9">Your style space</div>
     <h2>Welcome{% if request.user.is_authenticated %}, {{ request.user.first_name|default:request.user.username }}{% endif %}.</h2>
     <p>Something new is waiting to be discovered. Explore traditional Senator styles, Ankara prints, or test a virtual try-on with FASHN VTON 1.5.</p>
     <a class="button light" href="{% url 'style_intelligence' %}">Open AI Stylist Studio ↗</a>
@@ -21,22 +21,22 @@
 
 <div class="quick-grid">
   <a class="quick-link" href="{% url 'tryon' %}">
-    <div class="quick-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 9a2.2 2.2 0 1 1 2.2-2.2"/><path d="M12 9v2.2L3.7 16.9A1.2 1.2 0 0 0 4.4 19h15.2a1.2 1.2 0 0 0 .7-2.1L12 11.2"/></svg></div>
+    <div class="quick-icon">◉</div>
     <strong>Virtual Try-On</strong>
     <span>Preview outfits on your photo</span>
   </a>
   <a class="quick-link" href="{% url 'measurements' %}">
-    <div class="quick-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 12h17"/><path d="M6.5 9 3.5 12l3 3"/><path d="M17.5 9l3 3-3 3"/></svg></div>
+    <div class="quick-icon">↔</div>
     <strong>Measurements</strong>
     <span>Keep your fit profile current</span>
   </a>
   <a class="quick-link" href="{% url 'style_intelligence' %}">
-    <div class="quick-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3.5 13.9 9l5.6 1.9-5.6 1.9L12 18.4l-1.9-5.6L4.5 10.9 10.1 9z"/><path d="M18.6 3.4v3.2M20.2 5h-3.2"/></svg></div>
+    <div class="quick-icon">✳</div>
     <strong>Style Intelligence</strong>
     <span>Chat with your AI stylist</span>
   </a>
   <a class="quick-link" href="{% url 'designs' %}">
-    <div class="quick-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="4" width="7" height="7" rx="1.8"/><rect x="13" y="4" width="7" height="7" rx="1.8"/><rect x="4" y="13" width="7" height="7" rx="1.8"/><rect x="13" y="13" width="7" height="7" rx="1.8"/></svg></div>
+    <div class="quick-icon">◇</div>
     <strong>Explore Designs</strong>
     <span>Discover bespoke pieces</span>
   </a>
@@ -68,11 +68,7 @@
       </div>
     </article>
     {% empty %}
-    <div class="empty-state" style="grid-column: 1 / -1;">
-      <h3>New pieces are on the way</h3>
-      <p>The collection is being prepared. Check back shortly, or explore the AI Stylist for looks curated to you.</p>
-      <a class="button small" href="{% url 'style_intelligence' %}">Open AI Stylist</a>
-    </div>
+    <p>No designs found. Run seed_data to populate.</p>
     {% endfor %}
   </div>
 </section>

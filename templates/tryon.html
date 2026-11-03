@@ -1,82 +1,89 @@
 {% extends "base.html" %}
-{% load static %}
 
 {% block title %}Virtual Try-On | Fitverse AI{% endblock %}
 {% block page_title %}Virtual try-on{% endblock %}
 
-{% block extra_head %}
-<link rel="stylesheet" href="{% static 'assets/tryon.css' %}?v=6">
-{% endblock %}
-
 {% block content %}
-<section class="tryon-page tryon-apple" id="dedicated-tryon">
-  <div class="tryon-stage-grid">
-    <div class="tryon-editor">
-      <p class="tryon-eyebrow">Virtual fitting room</p>
-      <h2>Try the look on.<br><span>Before the shoot.</span></h2>
-      <p class="tryon-lead">Upload a model photo and a garment shot. Fitverse dresses the model in seconds — no studio, no manual cut-out.</p>
+<section class="tryon-page tryon-page-redesign" id="dedicated-tryon">
+  <div class="tryon-redesign-grid">
+    <div class="tryon-redesign-copy">
+      <span class="eyebrow">FITVERSE AI / VIRTUAL FITTING ROOM</span>
+      <h2>AI Virtual Try-On for<br><em>Any Model Photo</em></h2>
+      <p>Upload a model photo and a flat garment photo — get the outfit dressed on the model, without booking a shoot or cutting the garment out by hand.</p>
 
       <div class="tryon-upload-grid">
-        <label class="tryon-upload-card" for="dedicated-person-upload" data-drop="person">
-          <span class="tryon-step">1</span>
-          <span class="tryon-tile-icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.4"/><path d="M4.8 20c.7-3.6 3.6-5.6 7.2-5.6s6.5 2 7.2 5.6"/></svg>
-          </span>
-          <span class="tryon-tile-copy">
-            <strong>Model photo</strong>
-            <small id="dedicated-person-name">Full body, good light</small>
-          </span>
-          <span class="tryon-tile-check" aria-hidden="true">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5 10 17.5 19 7"/></svg>
-          </span>
-          <img id="dedicated-person-card-preview" alt="">
+        <label class="tryon-upload-card selected" for="dedicated-person-upload">
+          <span class="tryon-letter">A</span>
+          <span class="tryon-card-icon">♙</span>
+          <strong>Your model</strong>
+          <small id="dedicated-person-name">Real photo or AI avatar</small>
+          <img id="dedicated-person-card-preview" alt="" aria-hidden="true">
           <input type="file" id="dedicated-person-upload" accept="image/*">
         </label>
-
-        <label class="tryon-upload-card" for="dedicated-garment-upload" data-drop="garment">
-          <span class="tryon-step">2</span>
-          <span class="tryon-tile-icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4.5 12 6l3-1.5 4 2.5-1.6 3.4L15 9.6V20H9V9.6l-2.4.8L5 7z"/></svg>
-          </span>
-          <span class="tryon-tile-copy">
-            <strong>Garment photo</strong>
-            <small id="dedicated-garment-name">Flat lay, packshot or model</small>
-          </span>
-          <span class="tryon-tile-check" aria-hidden="true">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5 10 17.5 19 7"/></svg>
-          </span>
-          <img id="dedicated-garment-card-preview" alt="">
+        <label class="tryon-upload-card" for="dedicated-garment-upload">
+          <span class="tryon-letter">B</span>
+          <span class="tryon-card-icon">◇</span>
+          <strong>Your garment</strong>
+          <small id="dedicated-garment-name">Flat lay, model photo or packshot</small>
+          <img id="dedicated-garment-card-preview" alt="" aria-hidden="true">
           <input type="file" id="dedicated-garment-upload" accept="image/*">
         </label>
       </div>
 
-      <div class="tryon-hint" id="dedicated-garment-status">Add a garment photo to complete the pair.</div>
+      <div class="tryon-upload-hint tryon-redesign-hint" id="dedicated-garment-status"><span>＋</span> Select a catalog design below or upload your own garment.</div>
+      <button type="button" class="tryon-generate-button" onclick="runDedicatedTryOn()"><span>♧</span> Add both photos to generate</button>
+      <div id="tryon-status" class="tryon-status" style="display:none" aria-live="polite"></div>
 
-      <button type="button" class="tryon-generate" id="dedicated-generate" onclick="runDedicatedTryOn()">
-        <span class="tryon-generate-label">Add both photos to generate</span>
-        <svg class="tryon-generate-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h13M13 6l6 6-6 6"/></svg>
-      </button>
+      <div class="tryon-trust-row">
+        <span>✓ Free to try</span><span>✓ No login</span><span>✓ 1 free task daily</span><span>✓ HD output</span><span>✓ Runs in the browser</span>
+      </div>
 
-      <div id="tryon-status" class="tryon-status" role="status" aria-live="polite" style="display:none"></div>
-
-      <ul class="tryon-trust">
-        <li>Free to try</li>
-        <li>No login</li>
-        <li>1 free task daily</li>
-        <li>HD output</li>
-      </ul>
+      <div class="tryon-catalog panel">
+        <div class="panel-head">
+          <div><span class="eyebrow">Or choose from Fitverse</span><h3>Garment library</h3></div>
+          <a href="{% url 'designs' %}" class="text-button">Browse all ↗</a>
+        </div>
+        <div class="mini-designs">
+          {% for design in preset_designs %}
+            <button type="button" class="mini-design {% if forloop.first %}selected{% endif %}" data-choice data-design-id="{{ design.id }}" data-design-image="{{ design.image_url }}" data-design-category="{{ design.vton_category }}" onclick="selectTryonDesign(this)">
+              <img src="{{ design.image_url }}" alt="{{ design.title }}">
+              <span>{{ design.title|truncatewords:2 }}</span>
+            </button>
+          {% endfor %}
+        </div>
+      </div>
     </div>
 
-    <div class="tryon-preview" aria-label="Try-on preview">
-      <div class="tryon-preview-main">
+    <div class="tryon-redesign-art" aria-label="Virtual try-on examples">
+      <div class="tryon-art-main">
+        <div class="tryon-art-label">YOUR RESULT</div>
+        <div class="tryon-result-copy">
+          <span class="result-spark">✦</span>
+          <strong id="tryon-stage-label">Your generated look will appear here</strong>
+          <small>Upload both images, then generate to see the result.</small>
+        </div>
+        <div class="preview-overlay" id="dedicated-vton-loader" style="display:none">
+          <div class="spinner"></div><strong>Rendering your look</strong><small>FASHN VTON 1.5 is working...</small>
+        </div>
         {% with first_design=preset_designs|first %}
           <img id="user-photo-preview" src="{{ first_design.image_url }}" alt="Virtual try-on result">
         {% endwith %}
-        <div class="preview-overlay" id="dedicated-vton-loader" style="display:none">
-          <div class="spinner"></div>
-          <strong>Rendering your look</strong>
-          <small>This usually takes 20–60 seconds.</small>
-        </div>
+      </div>
+      <div class="tryon-art-card tryon-art-card-top">
+        {% with second_design=preset_designs|slice:"1:2"|first %}
+          <img src="{{ second_design.image_url }}" alt="Fitverse outfit example">
+        {% endwith %}
+      </div>
+      <div class="tryon-art-card tryon-art-card-bottom">
+        {% with third_design=preset_designs|slice:"2:3"|first %}
+          <img src="{{ third_design.image_url }}" alt="Fitverse styling example">
+        {% endwith %}
+      </div>
+      <div class="tryon-art-garment">
+        <span>＋</span>
+        {% with fourth_design=preset_designs|slice:"3:4"|first %}
+          <img src="{{ fourth_design.image_url }}" alt="Garment detail">
+        {% endwith %}
       </div>
     </div>
   </div>
