@@ -14,7 +14,7 @@ from django.utils import timezone
 from .models import Category, Design, UserMeasurement, SavedLook, Favorite, VirtualTryOn
 from .services.fashn_vton import FashnVtonError, generate_try_on
 from .services.gemini_ai import GeminiError, generate_stylist_response, generate_try_on as generate_gemini_try_on
-from .services.bodygram import BodygramError, estimate_measurements
+from .services.bodygram import BodygramError, estimate_measurements, normalize_photo
 
 logger = logging.getLogger(__name__)
 
@@ -459,6 +459,15 @@ def api_bodygram_measurements(request):
     front_bytes = front_photo.read()
     right_bytes = right_photo.read()
 
+    # Bodygram only accepts 9:16 portrait photos; crop whatever was uploaded
+    # so a normal camera roll image can be used without manual editing.
+    normalized_front = normalize_photo(front_bytes)
+    normalized_right = normalize_photo(right_bytes)
+    if normalized_front:
+        front_bytes = normalized_front
+    if normalized_right:
+        right_bytes = normalized_right
+
     try:
         result = estimate_measurements(
             front_photo=front_bytes,
@@ -494,8 +503,8 @@ def api_bodygram_measurements(request):
         scan_id=result['scan_id'],
         front_bytes=front_bytes,
         right_bytes=right_bytes,
-        front_name=getattr(front_photo, 'name', '') or '',
-        right_name=getattr(right_photo, 'name', '') or '',
+        front_name='front.jpg' if normalized_front else (getattr(front_photo, 'name', '') or ''),
+        right_name='right.jpg' if normalized_right else (getattr(right_photo, 'name', '') or ''),
         avatar_bytes=result.get('avatar_obj'),
     )
     measurements.save()

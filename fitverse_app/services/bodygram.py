@@ -1,4 +1,5 @@
 import base64
+import io
 import json
 import re
 from urllib.error import HTTPError, URLError
@@ -6,6 +7,12 @@ from urllib.parse import quote
 from urllib.request import Request, urlopen
 
 from django.conf import settings
+from PIL import Image, ImageOps
+
+# Bodygram rejects scans whose photos are not portrait 9:16 (e.g. a 4:3 camera
+# shot or a landscape upload), so every photo is cropped to that shape first.
+TARGET_ASPECT = 9 / 16
+TARGET_SIZE = (1080, 1920)
 
 
 class BodygramError(Exception):
@@ -90,6 +97,19 @@ def _http_error(exc):
         return BodygramError("That Bodygram scan could not be found on this account.")
     if exc.code == 429:
         return BodygramError("Bodygram scan quota is exhausted for this account.")
+    if exc.code == 400:
+        message = ''
+        try:
+            message = (json.loads(detail).get('error') or {}).get('message') or ''
+        except (ValueError, AttributeError):
+            message = ''
+        if 'aspect ratio' in message.lower():
+            return BodygramError(
+                "Bodygram needs a 9:16 portrait photo. Upload the photo upright, "
+                "or crop it to 9:16 before scanning."
+            )
+        if message:
+            return BodygramError(f"Bodygram rejected the request: {message}")
     if exc.code == 422:
         return BodygramError(
             "Bodygram could not analyse these photos. Use a clear front and right-side photo of the full body."
@@ -261,6 +281,41 @@ def _stats_from_input(input_data):
     if scan_input.get('weight') is not None:
         stats['weight_kg'] = round(float(scan_input['weight']) / 1000.0, 2)
     return stats
+
+
+def normalize_photo(data, *, size=TARGET_SIZE):
+    """Center-crop image bytes to Bodygram's 9:16 portrait frame.
+
+    Returns JPEG bytes, or ``None`` when the data cannot be decoded so the
+    caller can fall back to the original upload.
+    """
+    if not data:
+        return None
+    try:
+        with Image.open(io.BytesIO(data)) as source:
+            image = ImageOps.exif_transpose(source).convert('RGB')
+            width, height = image.size
+            if width <= 0 or height <= 0:
+                return None
+            aspect = width / height
+            if aspect > TARGET_ASPECT:  # too wide: trim the sides
+                new_width = max(1, round(height * TARGET_ASPECT))
+                left = (width - new_width) // 2
+                image = image.crop((left, 0, left + new_width, height))
+            elif aspect < TARGET_ASPECT:  # too tall: trim top and bottom
+                new_height = max(1, round(width / TARGET_ASPECT))
+                top = (height - new_height) // 2
+                image = image.crop((0, top, width, top + new_height))
+
+            resample = getattr(Image, 'Resampling', Image).LANCZOS
+            if image.size != size:
+                image = image.resize(size, resample)
+
+            buffer = io.BytesIO()
+            image.save(buffer, format='JPEG', quality=92, optimize=True)
+            return buffer.getvalue()
+    except Exception:
+        return None
 
 
 def _photo_payload(front_photo, right_photo, age, gender, height_cm, weight_kg):

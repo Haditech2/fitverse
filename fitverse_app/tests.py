@@ -10,6 +10,7 @@ from django.core.files.base import ContentFile
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import SimpleTestCase, TestCase, override_settings
 from django.utils import timezone
+from PIL import Image
 
 from . import views
 from .models import UserMeasurement
@@ -317,6 +318,30 @@ class BodygramServiceTests(SimpleTestCase):
             with self.assertRaisesMessage(bodygram.BodygramError, "could not estimate"):
                 self._estimate()
 
+    def test_normalize_photo_crops_landscape_to_9x16(self):
+        data = bodygram.normalize_photo(self._photo(1600, 900))
+        with Image.open(BytesIO(data)) as image:
+            self.assertEqual(image.size, (1080, 1920))
+
+    def test_normalize_photo_trims_images_taller_than_9x16(self):
+        data = bodygram.normalize_photo(self._photo(800, 2000))
+        with Image.open(BytesIO(data)) as image:
+            self.assertEqual(image.size, (1080, 1920))
+
+    def test_normalize_photo_keeps_exact_9x16(self):
+        data = bodygram.normalize_photo(self._photo(1080, 1920))
+        with Image.open(BytesIO(data)) as image:
+            self.assertEqual(image.size, (1080, 1920))
+
+    def test_normalize_photo_returns_none_for_unknown_bytes(self):
+        self.assertIsNone(bodygram.normalize_photo(b"not-an-image"))
+
+    @staticmethod
+    def _photo(width, height):
+        buffer = BytesIO()
+        Image.new("RGB", (width, height), (90, 100, 110)).save(buffer, format="PNG")
+        return buffer.getvalue()
+
     @override_settings(BODYGRAM_ORG_ID="", BODYGRAM_API_KEY="")
     def test_missing_credentials_raises_clear_error(self):
         with self.assertRaisesMessage(bodygram.BodygramError, "not configured"):
@@ -536,3 +561,38 @@ class BodygramEndpointTests(TestCase):
         response = self._post(age="5")
         self.assertEqual(response.status_code, 400)
         self.assertIn("age", json.loads(response.content)["error"])
+
+    def test_landscape_upload_is_normalized_before_bodygram(self):
+        result = {
+            "scan_id": "scan_ratio",
+            "measurements": {"chest": 100.0},
+            "all_measurements": [],
+            "body_composition": None,
+            "posture": None,
+            "avatar_obj": None,
+        }
+        with mock.patch.object(views, "estimate_measurements", return_value=result) as estimate:
+            response = self._post(
+                front_photo=SimpleUploadedFile(
+                    "front.png", self._photo(1200, 900), content_type="image/png"
+                ),
+                right_photo=SimpleUploadedFile(
+                    "right.png", self._photo(900, 900), content_type="image/png"
+                ),
+            )
+
+        self.assertEqual(response.status_code, 200)
+        for key in ("front_photo", "right_photo"):
+            with Image.open(BytesIO(estimate.call_args.kwargs[key])) as image:
+                self.assertEqual(image.size, (1080, 1920))
+                self.assertEqual(image.format, "JPEG")
+
+        saved = UserMeasurement.objects.get()
+        self.assertTrue(saved.bodygram_front_photo.name.endswith(".jpg"))
+        self.assertTrue(saved.bodygram_right_photo.name.endswith(".jpg"))
+
+    @staticmethod
+    def _photo(width, height):
+        buffer = BytesIO()
+        Image.new("RGB", (width, height), (120, 110, 100)).save(buffer, format="PNG")
+        return buffer.getvalue()
