@@ -1,9 +1,14 @@
 {% extends "base.html" %}
+{% load static %}
 
 {% block title %}Discover Designs | Fitverse AI{% endblock %}
 {% block page_title %}Discover designs{% endblock %}
 
 {% block content %}
+{% static 'assets/looks/glamour-corset-360.webp' as MediaA %}
+{% static 'assets/looks/ankara-layered-360.webp' as MediaB %}
+{% static 'assets/looks/green-peplum-360.webp' as MediaC %}
+{% static 'assets/looks/kaftan-living-360.webp' as MediaD %}
 <div class="section-head">
   <div>
     <div class="eyebrow">The Fitverse edit</div>
@@ -27,9 +32,14 @@
   {% for design in designs %}
   <article class="product-card" data-category="{{ design.category.slug }}" data-search="{{ design.title }} {{ design.search_keywords }}">
     <div class="product-image">
-      <a href="{% url 'design_detail' design.slug %}">
-        <img loading="lazy" src="{{ design.image_url }}" alt="{{ design.title }}">
-      </a>
+        <a href="{% url 'design_detail' design.slug %}">
+          {% if "upload.wikimedia.org" in design.image_url %}
+          <img {% if forloop.counter > 4 %}loading="lazy"{% endif %} decoding="async" src="{% cycle MediaA MediaB MediaC MediaD %}" width="360" height="639" alt="{{ design.title }}">
+          {% else %}
+          <img {% if forloop.counter > 4 %}loading="lazy"{% endif %} decoding="async" data-smart-image="card" data-source="{{ design.image_url }}" width="900" height="1200" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==" alt="{{ design.title }}">
+          <noscript><img {% if forloop.counter > 4 %}loading="lazy"{% endif %} width="900" height="1200" src="{{ design.image_url }}" alt="{{ design.title }}"></noscript>
+          {% endif %}
+        </a>
       {% if design.source_label %}
         <span class="tag image-credit">{{ design.source_label }}</span>
       {% endif %}

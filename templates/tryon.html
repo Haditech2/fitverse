@@ -1,9 +1,18 @@
 {% extends "base.html" %}
+{% load static %}
 
 {% block title %}Virtual Try-On | Fitverse AI{% endblock %}
 {% block page_title %}Virtual try-on{% endblock %}
 
+{% block extra_head %}
+<meta name="description" content="Try any Fitverse design on a real photo with FASHN VTON 1.5 — upload a model photo and a garment, and get a fitted AI try-on in seconds.">
+{% endblock %}
+
 {% block content %}
+{% static 'assets/looks/glamour-corset-360.webp' as MediaA %}
+{% static 'assets/looks/ankara-layered-360.webp' as MediaB %}
+{% static 'assets/looks/green-peplum-360.webp' as MediaC %}
+{% static 'assets/looks/kaftan-living-360.webp' as MediaD %}
 <section class="tryon-page tryon-page-redesign" id="dedicated-tryon">
   <div class="tryon-redesign-grid">
     <div class="tryon-redesign-copy">
@@ -25,7 +34,7 @@
           <span class="tryon-card-icon">◇</span>
           <strong>Your garment</strong>
           <small id="dedicated-garment-name">Flat lay, model photo or packshot</small>
-          <img id="dedicated-garment-card-preview" alt="" aria-hidden="true">
+          <img id="dedicated-garment-card-preview" data-smart-image="card" data-smart-sizes="(max-width:760px) calc(100vw - 88px), 300px" width="900" height="1200" alt="" aria-hidden="true">
           <input type="file" id="dedicated-garment-upload" accept="image/*">
         </label>
       </div>
@@ -46,7 +55,12 @@
         <div class="mini-designs">
           {% for design in preset_designs %}
             <button type="button" class="mini-design {% if forloop.first %}selected{% endif %}" data-choice data-design-id="{{ design.id }}" data-design-image="{{ design.image_url }}" data-design-category="{{ design.vton_category }}" onclick="selectTryonDesign(this)">
-              <img src="{{ design.image_url }}" alt="{{ design.title }}">
+              {% if "upload.wikimedia.org" in design.image_url %}
+              <img loading="lazy" decoding="async" width="360" height="480" src="{% cycle MediaA MediaB MediaC MediaD %}" alt="{{ design.title }}">
+              {% else %}
+              <img loading="lazy" decoding="async" data-smart-image="card" width="360" height="480" data-source="{{ design.image_url }}" sizes="104px" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==" alt="{{ design.title }}">
+              <noscript><img loading="lazy" width="360" height="480" src="{{ design.image_url }}" alt="{{ design.title }}"></noscript>
+              {% endif %}
               <span>{{ design.title|truncatewords:2 }}</span>
             </button>
           {% endfor %}
@@ -63,28 +77,46 @@
           <small>Upload both images, then generate to see the result.</small>
         </div>
         <div class="preview-overlay" id="dedicated-vton-loader" style="display:none">
-          <div class="spinner"></div><strong>Rendering your look</strong><small>FASHN VTON 1.5 is working...</small>
+          <div class="brand-spinner" aria-hidden="true"><img src="{% static 'assets/brand/fitverse-mark-96.webp' %}" width="96" height="81" loading="lazy" alt=""></div><strong>Rendering your look</strong><small>FASHN VTON 1.5 is working...</small>
         </div>
         {% with first_design=preset_designs|first %}
-          <img id="user-photo-preview" src="{{ first_design.image_url }}" alt="Virtual try-on result">
+          <img id="user-photo-preview" loading="lazy" decoding="async"
+            src="{% static 'assets/looks/set-pleat-360.webp' %}"
+            srcset="{% static 'assets/looks/set-pleat-360.webp' %} 360w, {% static 'assets/looks/set-pleat-720.webp' %} 720w"
+            sizes="(max-width:520px) 88vw, (max-width:1050px) 60vw, 590px"
+            width="720" height="960" alt="Model wearing Fitverse styling">
         {% endwith %}
       </div>
       <div class="tryon-art-card tryon-art-card-top">
         {% with second_design=preset_designs|slice:"1:2"|first %}
-          <img src="{{ second_design.image_url }}" alt="Fitverse outfit example">
+          <img
+            src="{% static 'assets/looks/glamour-corset-240.webp' %}"
+            srcset="{% static 'assets/looks/glamour-corset-240.webp' %} 240w, {% static 'assets/looks/glamour-corset-360.webp' %} 360w"
+            sizes="(max-width:520px) 120px, 200px"
+            width="360" height="639" loading="lazy" alt="Fitverse outfit example">
         {% endwith %}
       </div>
       <div class="tryon-art-card tryon-art-card-bottom">
         {% with third_design=preset_designs|slice:"2:3"|first %}
-          <img src="{{ third_design.image_url }}" alt="Fitverse styling example">
+          <img
+            src="{% static 'assets/looks/ankara-feather-240.webp' %}"
+            srcset="{% static 'assets/looks/ankara-feather-240.webp' %} 240w, {% static 'assets/looks/ankara-feather-360.webp' %} 360w"
+            sizes="(max-width:520px) 138px, 200px"
+            width="360" height="452" loading="lazy" alt="Fitverse styling example">
         {% endwith %}
       </div>
-      <div class="tryon-art-garment">
-        <span>＋</span>
-        {% with fourth_design=preset_designs|slice:"3:4"|first %}
-          <img src="{{ fourth_design.image_url }}" alt="Garment detail">
-        {% endwith %}
-      </div>
+      {% with fourth_design=preset_designs|slice:"3:4"|first %}
+        {% if fourth_design %}
+        <div class="tryon-art-garment">
+          <span>＋</span>
+          <img
+            src="{% static 'assets/looks/green-peplum-240.webp' %}"
+            srcset="{% static 'assets/looks/green-peplum-240.webp' %} 240w, {% static 'assets/looks/green-peplum-360.webp' %} 360w"
+            sizes="(max-width:520px) 110px, 160px"
+            width="240" height="427" loading="lazy" alt="Garment detail">
+        </div>
+        {% endif %}
+      {% endwith %}
     </div>
   </div>
 </section>

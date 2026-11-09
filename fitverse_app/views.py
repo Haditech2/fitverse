@@ -3,6 +3,8 @@ import logging
 import os
 
 from django.core.files.base import ContentFile
+from django.core.cache import cache
+from django.core.files.storage import default_storage
 from django.shortcuts import render, get_object_or_404, redirect
 from django.http import JsonResponse
 from django.conf import settings
@@ -15,6 +17,8 @@ from .models import Category, Design, UserMeasurement, SavedLook, Favorite, Virt
 from .services.fashn_vton import FashnVtonError, generate_try_on
 from .services.gemini_ai import GeminiError, generate_stylist_response, generate_try_on as generate_gemini_try_on
 from .services.bodygram import BodygramError, estimate_measurements, normalize_photo
+from .services import look360
+from .services.look360 import Look360Error
 
 logger = logging.getLogger(__name__)
 
@@ -132,6 +136,165 @@ def design_detail_view(request, slug):
         'design': design,
         'related_designs': related_designs,
     })
+
+
+def _look360_ready(model_url, *, demo=False, message=''):
+    payload = {'state': 'ready', 'model_url': model_url, 'demo': bool(demo)}
+    if message:
+        payload['message'] = message
+    return JsonResponse(payload)
+
+
+def _look360_model_name(slug):
+    return f'look360/{slug}.glb'
+
+
+def _look360_task_name(slug):
+    return f'look360/{slug}.task'
+
+
+def _load_look360_task(slug):
+    """Read an in-flight Meshy task from cache or its tiny disk sidecar."""
+    cache_key = f'look360:task:{slug}'
+    task_id = cache.get(cache_key)
+    if task_id:
+        return task_id
+
+    task_name = _look360_task_name(slug)
+    if not default_storage.exists(task_name):
+        return ''
+    try:
+        with default_storage.open(task_name, 'rb') as task_file:
+            task_id = task_file.read(256).decode('utf-8').strip()
+    except (OSError, UnicodeDecodeError):
+        return ''
+    if task_id:
+        cache.set(cache_key, task_id, 60 * 60 * 24)
+    return task_id
+
+
+def _save_look360_task(slug, task_id):
+    """Persist task identity before polling, so autoreloads cannot duplicate it."""
+    cache.set(f'look360:task:{slug}', task_id, 60 * 60 * 24)
+    task_name = _look360_task_name(slug)
+    if default_storage.exists(task_name):
+        default_storage.delete(task_name)
+    default_storage.save(task_name, ContentFile(task_id.encode('utf-8')))
+
+
+def _clear_look360_task(slug):
+    cache.delete(f'look360:task:{slug}')
+    task_name = _look360_task_name(slug)
+    if default_storage.exists(task_name):
+        default_storage.delete(task_name)
+
+
+def _store_look360_model(slug, remote_url):
+    """Persist Meshy's signed GLB locally; fall back to its URL if saving fails."""
+    model_name = _look360_model_name(slug)
+    if default_storage.exists(model_name):
+        return default_storage.url(model_name)
+    try:
+        model_data = look360.download_model(remote_url)
+        saved_name = default_storage.save(model_name, ContentFile(model_data))
+        return default_storage.url(saved_name)
+    except (Look360Error, OSError) as exc:
+        logger.warning('Could not persist Look 360 model for %s: %s', slug, exc)
+        return remote_url
+
+
+@csrf_exempt
+def api_look360(request, slug):
+    """Relay for the design page's real 360 view (Meshy image-to-3D).
+
+    POST ``{}``       -> start (or resume) the task for this design
+    POST ``{task_id}`` -> poll an in-flight task
+
+    Finished models are cached per design so seconds visits open instantly.
+    With no API key configured the browser gets the demo model, clearly
+    flagged, instead of a fake "real" 360.
+    """
+    design = get_object_or_404(Design, slug=slug)
+
+    if request.method != 'POST':
+        return JsonResponse({'state': 'failed', 'message': 'POST required.'}, status=405)
+
+    local_model = _look360_model_name(slug)
+    if default_storage.exists(local_model):
+        _clear_look360_task(slug)
+        return _look360_ready(default_storage.url(local_model))
+
+    glb = cache.get(f'look360:glb:{slug}')
+    if glb:
+        served_glb = _store_look360_model(slug, glb) if glb.startswith('http') else glb
+        cache.set(f'look360:glb:{slug}', served_glb, 60 * 60 * 24 * 7)
+        _clear_look360_task(slug)
+        return _look360_ready(served_glb)
+
+    try:
+        request_payload = json.loads(request.body.decode('utf-8')) if request.body else {}
+    except (json.JSONDecodeError, UnicodeDecodeError):
+        return JsonResponse({'state': 'failed', 'message': 'Invalid request.'}, status=400)
+
+    task_id = str(request_payload.get('task_id') or '').strip()
+    if len(task_id) > 200:
+        return JsonResponse({'state': 'failed', 'message': 'Invalid 3D task id.'}, status=400)
+    task_id = task_id or _load_look360_task(slug)
+
+    if not look360.get_api_key():
+        return _look360_ready(
+            look360.DEMO_MODEL_URL,
+            demo=True,
+            message='Demo 360 view. Add a free Meshy API key (FITVERSE_3D_API_KEY) '
+                    'to convert this exact design.',
+        )
+
+    if not task_id:
+        try:
+            task_id = look360.create_task(design.image_url)
+        except Look360Error as exc:
+            return JsonResponse({'state': 'failed', 'message': str(exc)}, status=502)
+        _save_look360_task(slug, task_id)
+    elif not _load_look360_task(slug):
+        # A browser can reconnect with its task id after a server restart.
+        _save_look360_task(slug, task_id)
+
+    try:
+        payload = look360.get_task(task_id)
+    except Look360Error as exc:
+        return JsonResponse({'state': 'failed', 'message': str(exc)}, status=502)
+
+    status = (payload.get('status') or '').upper()
+
+    if status == 'SUCCEEDED':
+        glb = (payload.get('model_urls') or {}).get('glb') or ''
+        if not glb:
+            return JsonResponse({
+                'state': 'failed',
+                'message': 'The 3D service finished without a downloadable model.',
+            }, status=502)
+        glb = _store_look360_model(slug, glb)
+        cache.set(f'look360:glb:{slug}', glb, 60 * 60 * 24 * 7)
+        _clear_look360_task(slug)
+        return _look360_ready(glb)
+
+    if status in ('PENDING', 'IN_PROGRESS'):
+        try:
+            progress = int(payload.get('progress') or 0)
+        except (TypeError, ValueError):
+            progress = 0
+        return JsonResponse({
+            'state': 'working',
+            'progress': progress,
+            'task_id': task_id,
+        })
+
+    if status in ('FAILED', 'CANCELED'):
+        _clear_look360_task(slug)
+        message = (payload.get('task_error') or {}).get('message') or 'The 3D conversion failed.'
+        return JsonResponse({'state': 'failed', 'message': message}, status=502)
+
+    return JsonResponse({'state': 'working', 'progress': 0, 'task_id': task_id})
 
 def tryon_view(request):
     preset_designs = Design.objects.filter(is_featured=True)[:6]

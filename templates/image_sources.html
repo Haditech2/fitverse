@@ -3,13 +3,18 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#044625">
   <title>Fashion image sources | Fitverse AI</title>
-  <link rel="stylesheet" href="{% static 'assets/styles.css' %}">
+  <link rel="icon" href="{% static 'assets/brand/fitverse-mark.webp' %}" type="image/webp">
+  <link rel="stylesheet" href="{% static 'assets/styles.css' %}?v=10">
+  <link rel="stylesheet" href="{% static 'assets/experience.css' %}?v=13">
 </head>
-<body>
-  <main class="app-main" style="max-width:900px;margin:auto;padding:36px 22px">
-    <a class="logo" href="{% url 'home' %}">Fitverse<span> AI</span></a>
+<body class="page-image-sources">
+  <a class="skip-link" href="#top">Skip to content</a>
+  {% include "includes/brand_loader.html" %}
+  <main class="app-main" id="top" style="max-width:900px;margin:auto;padding:36px 22px">
+    <a class="logo" href="{% url 'home' %}"><img class="brand-wordmark" src="{% static 'assets/brand/fitverse-wordmark-320.webp' %}" width="320" height="80" alt="FitVerse AI"></a>
     <div class="eyebrow" style="margin-top:32px">Transparency</div>
     <h1>Fashion inspiration & image credits</h1>
     <p>Fitverse uses a mix of openly licensed reference imagery and links to fashion editorial lookbooks. Images are for inspiration in this prototype; they are not Fitverse-owned designs and should not be represented as products available for sale.</p>
@@ -42,5 +47,6 @@
     <p class="muted">Before commercial launch, replace placeholders with designer-submitted photos, commissioned photography, or images with verified commercial-use licenses.</p>
     <a class="button" href="{% url 'designs' %}">Back to designs ↗</a>
   </main>
+  <script src="{% static 'assets/app.js' %}?v=21"></script>
 </body>
 </html>

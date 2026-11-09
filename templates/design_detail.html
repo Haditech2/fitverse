@@ -1,19 +1,52 @@
 {% extends "base.html" %}
+{% load static %}
 
 {% block title %}{{ design.title }} | Fitverse AI{% endblock %}
 {% block page_title %}Design details{% endblock %}
 
+{% block extra_head %}
+<meta name="description" content="{{ design.title }} — {{ design.description|truncatechars:140 }}">
+{% endblock %}
+
 {% block content %}
 <div class="detail-layout">
   <div class="detail-gallery">
-    <img src="{{ design.image_url }}" alt="{{ design.title }}">
+    <figure class="turntable" data-turntable data-design-slug="{{ design.slug }}" tabindex="0" role="group" aria-label="Drag to spin — interactive look viewer; use arrow keys or pick a look below">
+      <div class="turntable-stage">
+        <img src="{{ design.image_url }}" alt="{{ design.title }}" draggable="false">
+      </div>
+      <figcaption class="turntable-hint"><i aria-hidden="true">↔</i> Drag to spin</figcaption>
+      <button class="look360-btn" data-look360 type="button" aria-label="⟳ 360° interactive 3D view">
+        <i aria-hidden="true">⟳</i> 360°
+      </button>
+      <div class="look360-panel" data-look360-panel hidden>
+        <model-viewer data-look360-viewer
+          camera-controls
+          auto-rotate
+          rotation-per-second="24"
+          shadow-intensity="1"
+          exposure="1"
+          alt="360 degree 3D view of {{ design.title }} — drag to rotate"></model-viewer>
+        <span class="look360-status" data-look360-status role="status"></span>
+        <button class="look360-close" data-look360-close type="button" aria-label="✕ Exit the 360 view">✕</button>
+      </div>
+    </figure>
+    <button class="look-thumb is-active" data-look-thumb type="button" data-full-src="{{ design.image_url }}" aria-label="Show the main look in the viewer">
+      <img src="{{ design.image_url }}" alt="" loading="lazy" draggable="false">
+    </button>
     {% if related_designs %}
       {% for rel in related_designs %}
-        <img src="{{ rel.image_url }}" alt="{{ rel.title }}">
+        <button class="look-thumb" data-look-thumb type="button" data-full-src="{{ rel.image_url }}" aria-label="Show {{ rel.title }} in the viewer">
+          <img src="{{ rel.image_url }}" alt="" loading="lazy" draggable="false">
+        </button>
       {% endfor %}
     {% else %}
-      <img src="https://images.unsplash.com/photo-1529139574466-a303027c1d8b?auto=format&fit=crop&w=900&q=85" alt="Styling inspiration">
-      <img src="https://images.unsplash.com/photo-1509631179647-0177331693ae?auto=format&fit=crop&w=900&q=85" alt="Fabric inspiration">
+      <button class="look-thumb" data-look-thumb type="button" data-full-src="{% static 'assets/looks/set-mudcloth-720.webp' %}" aria-label="Show the mudcloth panel set in the viewer">
+        <img src="{% static 'assets/looks/set-mudcloth-360.webp' %}" width="360" height="450" loading="lazy" alt="Mudcloth panel set inspiration" draggable="false">
+      </button>
+      <button class="look-thumb" data-look-thumb type="button" data-full-src="{% static 'assets/looks/set-pleat-720.webp' %}" aria-label="Show the pleated kaftan set in the viewer">
+        <img src="{% static 'assets/looks/set-pleat-360.webp' %}" width="360" height="480" loading="lazy" alt="Pleated kaftan set inspiration" draggable="false">
+      </button>
     {% endif %}
   </div>
 
@@ -35,14 +68,23 @@
       <p style="font-size:13px; margin:0;"><strong>Fabric:</strong> {{ design.fabric|default:"Tailored Textile" }} &nbsp;|&nbsp; <strong>Silhouette:</strong> {{ design.silhouette|default:"Classic" }}</p>
     </div>
 
-    <div class="field">
-      <label>Fit preference</label>
-      <select>
-        <option>Regular Balanced</option>
-        <option>Slim / Tailored</option>
-        <option>Relaxed Fit</option>
-        <option>Oversized Traditional</option>
-      </select>
+    <div class="fit-studio" data-fit-studio>
+      <label class="fit-label" id="fit-studio-label">Fit preview</label>
+      <div class="fit-opts" role="group" aria-labelledby="fit-studio-label">
+        <button type="button" data-fit="regular" class="is-active">Regular</button>
+        <button type="button" data-fit="slim">Tailored</button>
+        <button type="button" data-fit="relaxed">Relaxed</button>
+        <button type="button" data-fit="oversized">Oversized</button>
+      </div>
+      <div class="fit-stage" data-fit-stage aria-hidden="true">
+        <span class="fit-body"><i></i></span>
+        <span class="fit-drape"></span>
+      </div>
+      <p class="fit-note" data-fit-note>Skims the body — room for about three fingers of ease at the waist.</p>
+      <div class="fit-tape" data-fit-tape hidden>
+        <strong>Your tape</strong>
+        <span class="fit-tape-cols" data-fit-tape-cols></span>
+      </div>
     </div>
 
     <div class="actions">

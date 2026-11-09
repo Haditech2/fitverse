@@ -4,6 +4,9 @@ Django settings for fitverse_core project.
 
 from pathlib import Path
 import os
+import mimetypes
+
+mimetypes.add_type('model/gltf-binary', '.glb')
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 

@@ -1,9 +1,14 @@
 {% extends "base.html" %}
+{% load static %}
 
 {% block title %}My Wardrobe | Fitverse AI{% endblock %}
 {% block page_title %}My wardrobe{% endblock %}
 
 {% block content %}
+{% static 'assets/looks/glamour-corset-360.webp' as MediaA %}
+{% static 'assets/looks/ankara-layered-360.webp' as MediaB %}
+{% static 'assets/looks/green-peplum-360.webp' as MediaC %}
+{% static 'assets/looks/kaftan-living-360.webp' as MediaD %}
 <div class="section-head">
   <div>
     <div class="eyebrow">Your personal collection</div>
@@ -23,7 +28,12 @@
     <article class="product-card" data-category="{{ fav.design.category.slug }}">
       <div class="product-image">
         <a href="{% url 'design_detail' fav.design.slug %}">
-          <img loading="lazy" src="{{ fav.design.image_url }}" alt="{{ fav.design.title }}">
+          {% if "upload.wikimedia.org" in fav.design.image_url %}
+          <img loading="lazy" decoding="async" src="{% cycle MediaA MediaB MediaC MediaD %}" width="360" height="639" alt="{{ fav.design.title }}">
+          {% else %}
+          <img loading="lazy" decoding="async" data-smart-image="card" data-source="{{ fav.design.image_url }}" width="900" height="1200" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==" alt="{{ fav.design.title }}">
+          <noscript><img loading="lazy" width="900" height="1200" src="{{ fav.design.image_url }}" alt="{{ fav.design.title }}"></noscript>
+          {% endif %}
         </a>
         <button class="heart" aria-label="Remove {{ fav.design.title }}" data-favorite="{{ fav.design.id }}">♥</button>
       </div>
@@ -47,7 +57,7 @@
   {% for look in saved_looks %}
     <article class="product-card">
       <div class="product-image">
-        <img loading="lazy" src="{{ look.image_url }}" alt="{{ look.title }}">
+        <img loading="lazy" decoding="async" width="900" height="1200" src="{{ look.image_url }}" alt="{{ look.title }}">
       </div>
       <div class="product-info">
         <h3>{{ look.title }}</h3>

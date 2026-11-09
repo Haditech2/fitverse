@@ -28,4 +28,5 @@ urlpatterns = [
     path('api/measurements/bodygram/photos/delete/', views.api_bodygram_delete_photos, name='api_bodygram_delete_photos'),
     path('api/favorite/toggle/', views.api_toggle_favorite, name='api_toggle_favorite'),
     path('api/looks/save/', views.api_save_look, name='api_save_look'),
+    path('api/look360/designs/<slug:slug>/', views.api_look360, name='api_look360'),
 ]

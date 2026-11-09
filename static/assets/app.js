@@ -1,6 +1,93 @@
 const $ = (s, root=document) => root.querySelector(s);
 const $$ = (s, root=document) => [...root.querySelectorAll(s)];
 
+/* Keep remote editorial imagery from leaving a broken frame in the UI. */
+const FITVERSE_IMAGE_FALLBACK = '/static/assets/looks/ankara-layered-401.webp';
+
+function unsplashVariant(source, width, quality = 82){
+  try {
+    const url = new URL(source);
+    if(url.hostname !== 'images.unsplash.com') return source;
+    url.searchParams.set('auto', 'format');
+    url.searchParams.set('fit', 'crop');
+    url.searchParams.set('w', String(width));
+    url.searchParams.set('q', String(quality));
+    return url.toString();
+  } catch(e){
+    return source;
+  }
+}
+
+function optimizeEditorialImages(root = document){
+  $$('img[data-smart-image]', root).forEach(image => {
+    const source = image.dataset.source || image.getAttribute('src') || '';
+    if(!source || image.getAttribute('srcset')) return;
+
+    const cardImage = image.dataset.smartImage === 'card' || Boolean(image.closest('.product-card,.mini-design,.look-card'));
+    const widths = cardImage ? [240, 360, 600] : [480, 720, 900];
+    const optimized = widths.map((width, index) =>
+      `${unsplashVariant(source, width, 80 + index * 2)} ${width}w`
+    );
+
+    if(optimized.every(entry => entry.startsWith(source + ' '))){
+      if(image.dataset.source) image.src = source;
+      return;
+    }
+    image.srcset = optimized.join(', ');
+    image.sizes = image.dataset.smartSizes || (cardImage
+      ? '(max-width:760px) calc(50vw - 21px), (max-width:1120px) calc(33vw - 28px), 250px'
+      : '(max-width:760px) calc(100vw - 32px), 44vw');
+    image.src = unsplashVariant(source, cardImage ? 360 : 720, 82);
+  });
+}
+
+function applyImageFallback(image){
+  if(!(image instanceof HTMLImageElement) || image.dataset.fallbackApplied === 'true') return;
+  const source = image.getAttribute('src') || '';
+  if(!/^https?:\/\//i.test(source)) return;
+  image.dataset.fallbackApplied = 'true';
+  image.src = FITVERSE_IMAGE_FALLBACK;
+}
+
+document.addEventListener('error', event => {
+  if(event.target instanceof HTMLImageElement) applyImageFallback(event.target);
+}, true);
+
+function setupBrandLoader(){
+  const loader = document.getElementById('brand-loader');
+  if(!loader) return;
+
+  let dismissed = false;
+  const dismiss = () => {
+    if(dismissed) return;
+    dismissed = true;
+    const wait = Math.max(0, 700 - performance.now());
+    window.setTimeout(() => {
+      loader.classList.add('is-ready');
+      window.setTimeout(() => loader.setAttribute('aria-hidden', 'true'), 450);
+    }, wait);
+  };
+
+  if(document.readyState === 'complete') dismiss();
+  else window.addEventListener('load', dismiss, { once: true });
+  window.setTimeout(dismiss, 3200);
+
+  document.addEventListener('click', event => {
+    const link = event.target.closest('a[href]');
+    if(!link || event.defaultPrevented || link.target === '_blank' || link.hasAttribute('download')) return;
+    if(event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+    let destination;
+    try { destination = new URL(link.href, window.location.href); } catch(e) { return; }
+    if(destination.origin !== window.location.origin) return;
+    if(destination.pathname === window.location.pathname && destination.search === window.location.search && destination.hash) return;
+    loader.removeAttribute('aria-hidden');
+    loader.classList.remove('is-ready');
+    dismissed = false;
+  });
+}
+
+setupBrandLoader();
+
 /* Utility Toast */
 function toast(message){
   let el = $('#toast');
@@ -18,7 +105,13 @@ function toast(message){
 
 function toggleMenu(){
   const n = $('#main-nav');
-  if(n) n.classList.toggle('open');
+  const trigger = $('.menu-toggle');
+  if(!n) return;
+  const isOpen = n.classList.toggle('open');
+  if(trigger){
+    trigger.setAttribute('aria-expanded', String(isOpen));
+    trigger.setAttribute('aria-label', isOpen ? 'Close navigation' : 'Open navigation');
+  }
 }
 
 function markActive(el){
@@ -938,7 +1031,10 @@ function selectTryonDesign(button){
   if(status) status.textContent = 'Catalog garment selected. Upload a custom garment to replace it.';
   const preview = $('#dedicated-garment-card-preview');
   if(preview){
-    preview.src = button.dataset.designImage;
+    preview.dataset.source = button.dataset.designImage;
+    preview.removeAttribute('srcset');
+    preview.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==';
+    optimizeEditorialImages(preview.parentElement || document);
     preview.style.display = 'block';
   }
   const name = $('#dedicated-garment-name');
@@ -1430,8 +1526,319 @@ function setupStudioEvents(){
   });
 }
 
-/* Global Click & Init Listeners */
+/* The script is loaded after page markup, so lazy editorial images can be
+   right-sized before they approach the viewport. */
+optimizeEditorialImages();
+
+/* ================================ LOOK STUDIO ================================
+   Design-detail extras: a drag-to-spin turntable around the look photo and a
+   fit preview that visualises the chosen drape and echoes the user's saved
+   tape. Both are display-only: no requests, no stored state. */
+function setupTurntable(){
+  const stage = document.querySelector('[data-turntable]');
+  if(!stage || stage.dataset.turntableReady) return;
+  stage.dataset.turntableReady = 'true';
+
+  const frame = stage.querySelector('.turntable-stage');
+  const hint = stage.querySelector('.turntable-hint');
+  if(!frame) return;
+
+  let rotY = 0, rotX = 0, dragging = false, startX = 0, startY = 0, startRotY = 0;
+  const MAX_YAW = 34, MAX_PITCH = 7;
+
+  const paint = () => {
+    frame.style.transform = `perspective(1150px) rotateX(${rotX.toFixed(2)}deg) rotateY(${rotY.toFixed(2)}deg)`;
+  };
+  const settle = () => { rotY = 0; rotX = 0; frame.style.transform = 'perspective(1150px)'; };
+
+  stage.addEventListener('pointerdown', e => {
+    if(e.button && e.button !== 0) return;
+    if(stage.classList.contains('is-360')) return; /* the model owns the drag */
+    dragging = true; startX = e.clientX; startY = e.clientY; startRotY = rotY;
+    frame.style.transition = 'none';
+    hint.classList.add('is-used');
+    try { stage.setPointerCapture(e.pointerId); } catch(err) { /* older browsers */ }
+  });
+
+  stage.addEventListener('pointermove', e => {
+    if(!dragging) return;
+    rotY = Math.max(-MAX_YAW, Math.min(MAX_YAW, startRotY + (e.clientX - startX) * 0.24));
+    rotX = Math.max(-MAX_PITCH, Math.min(MAX_PITCH, (e.clientY - startY) * -0.10));
+    paint();
+  });
+
+  const release = () => {
+    if(!dragging) return;
+    dragging = false;
+    frame.style.transition = 'transform .7s cubic-bezier(.22, 1, .3, 1)';
+    settle();
+  };
+  stage.addEventListener('pointerup', release);
+  stage.addEventListener('pointercancel', release);
+
+  stage.addEventListener('keydown', e => {
+    if(stage.classList.contains('is-360')) return; /* model-viewer handles keys */
+    if(e.key.startsWith('Arrow')){
+      e.preventDefault();
+      settle();
+      const fling = e.key === 'ArrowLeft' ? -MAX_YAW : MAX_YAW;
+      frame.style.transition = 'transform .45s cubic-bezier(.25, 1, .3, 1)';
+      rotY = fling; rotX = 0;
+      paint();
+      setTimeout(settle, 520);
+      hint.classList.add('is-used');
+    }
+  });
+
+  /* Gallery thumbs swap the photo inside the turntable stage. */
+  const stageImg = frame.querySelector('img');
+  $$('[data-look-thumb]').forEach(thumb => {
+    thumb.addEventListener('click', () => {
+      const full = thumb.dataset.fullSrc || thumb.querySelector('img')?.getAttribute('src') || '';
+      if(!full || !stageImg) return;
+      frame.style.transition = 'none';
+      settle();
+      stageImg.removeAttribute('srcset');
+      stageImg.removeAttribute('sizes');
+      stageImg.src = full;
+      document.querySelectorAll('[data-look-thumb]').forEach(t => t.classList.toggle('is-active', t === thumb));
+    });
+  });
+  if(stageImg) stageImg.setAttribute('draggable', 'false');
+}
+
+/* ------------------------- LOOK 360 — real 3D view -----------------------
+   "360°" opens a Google <model-viewer> panel inside the turntable. The GLB
+   is produced on demand by a free image-to-3D API (Meshy) through the
+   /api/look360/ Django relay, so the browser never sees the API key. The
+   viewer module is loaded only on first open — never in the base page cost.
+   Without a configured key the relay serves a clearly-labelled demo model.
+   ------------------------------------------------------------------------ */
+const LOOK360_MODEL_VIEWER_SRC =
+  'https://ajax.googleapis.com/ajax/libs/model-viewer/4.1.0/model-viewer.min.js';
+
+let look360ViewerPromise = null;
+
+function loadLook360Viewer(){
+  if(window.customElements.get('model-viewer')) return Promise.resolve();
+  if(!look360ViewerPromise){
+    look360ViewerPromise = new Promise((resolve, reject) => {
+      const script = document.createElement('script');
+      script.type = 'module';
+      script.src = LOOK360_MODEL_VIEWER_SRC;
+      script.addEventListener('load', () => resolve());
+      script.addEventListener('error', () => {
+        look360ViewerPromise = null;
+        reject(new Error('Could not load the 360 viewer. Check your connection.'));
+      });
+      document.head.appendChild(script);
+    }).then(() =>
+      Promise.race([
+        window.customElements.whenDefined('model-viewer'),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('360 viewer did not start.')), 12000))
+      ])
+    ).catch(error => {
+      look360ViewerPromise = null;
+      throw error;
+    });
+  }
+  return look360ViewerPromise;
+}
+
+async function look360Ask(slug, taskId){
+  const response = await fetch(`/api/look360/designs/${encodeURIComponent(slug)}/`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(taskId ? { task_id: taskId } : {})
+  });
+  const payload = await response.json().catch(() => ({}));
+  if(payload && payload.state) return payload;
+  throw new Error(payload && payload.message ? payload.message : 'The 360 service is unavailable.');
+}
+
+function setupLook360(){
+  const stage = document.querySelector('[data-turntable][data-design-slug]');
+  const trigger = stage?.querySelector('[data-look360]');
+  if(!stage || !trigger || trigger.dataset.look360Ready) return;
+  trigger.dataset.look360Ready = 'true';
+
+  const slug = stage.dataset.designSlug;
+  const panel = stage.querySelector('[data-look360-panel]');
+  const viewer = stage.querySelector('model-viewer');
+  const statusEl = stage.querySelector('[data-look360-status]');
+  if(!panel || !viewer || !statusEl) return;
+
+  const lsKey = `look360:${slug}`;
+  let pollSeq = 0; /* bumped by start/close; stale poll turns no-op */
+  let modelRetryUsed = false;
+
+  const say = text => { statusEl.textContent = text; };
+
+  const present = ({ model_url, demo, message }) => {
+    if(demo) localStorage.removeItem(lsKey);
+    else saveLocal(lsKey, { model_url: model_url, demo: false });
+    stage.classList.add('is-360');
+    panel.hidden = false;
+    panel.dataset.state = 'live';
+    say(demo && !message
+      ? 'Demo 360 — add a free Meshy API key on the server to convert this exact design.'
+      : (message || 'Drag to rotate · AI 3D from this photo'));
+    viewer.setAttribute('src', model_url);
+    stage.focus?.({ preventScroll: true });
+  };
+
+  const fail = message => {
+    pollSeq++;
+    panel.dataset.state = 'error';
+    say(message);
+    localStorage.removeItem(lsKey);
+    setTimeout(() => {
+      if(panel.dataset.state === 'error'){
+        stage.classList.remove('is-360');
+        panel.hidden = true;
+        stage.focus?.({ preventScroll: true });
+      }
+    }, 4200);
+  };
+
+  const handle = (payload, seq) => {
+    if(seq !== pollSeq) return;
+    if(payload.state === 'ready' && payload.model_url){
+      present(payload);
+      return;
+    }
+    if(payload.state === 'working'){
+      panel.dataset.state = 'loading';
+      say(`Building your 360 view — ${payload.progress || 0}% (the first conversion takes a couple of minutes)`);
+      setTimeout(async () => {
+        if(seq !== pollSeq) return;
+        try {
+          handle(await look360Ask(slug, payload.task_id || ''), seq);
+        } catch(error){
+          if(seq !== pollSeq) return;
+          fail(error.message || 'Could not follow the 360 conversation.');
+        }
+      }, 4000);
+      return;
+    }
+    fail(payload.message || 'The 360 conversion failed. Please try again later.');
+  };
+
+  const start = async () => {
+    const seq = ++pollSeq;
+    panel.hidden = false;
+    panel.dataset.state = 'loading';
+    stage.classList.add('is-360');
+    say('Waking the 360 service…');
+    try {
+      await loadLook360Viewer();
+    } catch(error){
+      fail(error.message);
+      return;
+    }
+    try {
+      handle(await look360Ask(slug, ''), seq);
+    } catch(error){
+      fail(error.message || 'Something went wrong starting the 360 view.');
+    }
+  };
+
+  const close = () => {
+    pollSeq++;
+    stage.classList.remove('is-360');
+    panel.hidden = true;
+    panel.dataset.state = '';
+    stage.focus?.({ preventScroll: true });
+  };
+
+  trigger.addEventListener('click', async () => {
+    modelRetryUsed = false;
+    const cached = readLocal(lsKey, null);
+    if(cached && cached.model_url && !cached.demo){
+      panel.hidden = false;
+      panel.dataset.state = 'loading';
+      stage.classList.add('is-360');
+      say('Opening your 360 view…');
+      try {
+        await loadLook360Viewer();
+        present(cached);
+      } catch(error){
+        fail(error.message || 'Could not open the 360 viewer.');
+      }
+      return;
+    }
+    localStorage.removeItem(lsKey);
+    start();
+  });
+
+  stage.querySelector('[data-look360-close]')?.addEventListener('click', close);
+
+  /* A cached-but-expired model URL (Meshy links age out) falls back to the
+     relay exactly once instead of looping. */
+  viewer.addEventListener('error', () => {
+    if(!panel.hidden && panel.dataset.state === 'live'){
+      const stale = readLocal(lsKey, null);
+      localStorage.removeItem(lsKey);
+      viewer.removeAttribute('src');
+      if(stale && !modelRetryUsed){
+        modelRetryUsed = true;
+        start();
+      } else {
+        fail('The 3D model could not be displayed. Please try again later.');
+      }
+    }
+  });
+}
+
+const FIT_NOTES = {
+  regular: 'Skims the body — room for about three fingers of ease at the waist.',
+  slim: 'Cut close through the shoulder and torso; sits tidy when tucked.',
+  relaxed: 'Drapes off the shoulder and hip for an easy, unstiff line.',
+  oversized: 'Wide through the sleeve and hem; falls square off the shoulder.'
+};
+
+function setupFitStudio(){
+  const card = document.querySelector('[data-fit-studio]');
+  if(!card) return;
+
+  const stage = card.querySelector('[data-fit-stage]');
+  const note = card.querySelector('[data-fit-note]');
+  const tape = card.querySelector('[data-fit-tape]');
+  const tapeCols = card.querySelector('[data-fit-tape-cols]');
+
+  card.addEventListener('click', e => {
+    const btn = e.target.closest('[data-fit]');
+    if(!btn) return;
+    card.querySelectorAll('[data-fit]').forEach(b => b.classList.toggle('is-active', b === btn));
+    const fit = btn.dataset.fit;
+    if(stage) stage.dataset.fit = fit;
+    if(note) note.textContent = FIT_NOTES[fit] || FIT_NOTES.regular;
+  });
+
+  /* Saved tape (cm) from this browser's measurement profile. */
+  const data = readLocal('measurements', {});
+  const rows = ['chest', 'waist', 'hips'].filter(k => Number(data[k]) > 0);
+  if(tape && tapeCols && rows.length){
+    const unit = data.unit === 'in' ? 'in' : 'cm';
+    tapeCols.textContent = rows
+      .map(k => `${k[0].toUpperCase()}${k.slice(1)} <b>${data[k]}${unit}</b>`)
+      .join('<i aria-hidden="true">·</i>');
+    tape.hidden = false;
+  } else if(tape){
+    tape.hidden = false;
+    tapeCols.innerHTML = 'No tape saved yet — <a href="/measurements/">set measurements</a> to fit this preview to you.';
+  }
+}
+
 document.addEventListener('click', e => {
+  const mobileNavLink = e.target.closest('#main-nav a');
+  if(mobileNavLink && window.innerWidth <= 760){
+    $('#main-nav')?.classList.remove('open');
+    const trigger = $('.menu-toggle');
+    trigger?.setAttribute('aria-expanded', 'false');
+    trigger?.setAttribute('aria-label', 'Open navigation');
+  }
+
   const toastTrigger = e.target.closest('[data-toast]');
   if(toastTrigger){
     e.preventDefault();
@@ -1457,7 +1864,22 @@ document.addEventListener('click', e => {
   }
 });
 
+document.addEventListener('keydown', e => {
+  if(e.key !== 'Escape') return;
+  const nav = $('#main-nav');
+  if(!nav?.classList.contains('open')) return;
+  nav.classList.remove('open');
+  const trigger = $('.menu-toggle');
+  trigger?.setAttribute('aria-expanded', 'false');
+  trigger?.setAttribute('aria-label', 'Open navigation');
+  trigger?.focus();
+});
+
 document.addEventListener('DOMContentLoaded', () => {
+  $$('img[src^="http"]').forEach(image => {
+    if(image.complete && image.naturalWidth === 0) applyImageFallback(image);
+  });
+
   loadMeasurements();
   loadBodygramResult();
 
@@ -1487,6 +1909,9 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   setupStudioEvents();
+  setupTurntable();
+  setupLook360();
+  setupFitStudio();
 
   const firstTryonDesign = $('#dedicated-tryon .mini-design');
   if(firstTryonDesign) selectTryonDesign(firstTryonDesign);

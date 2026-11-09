@@ -5,7 +5,7 @@
  */
 (function () {
   const MODEL_HEIGHT = 1.78; // viewer units after normalisation
-  const BAND_COLOR = 0x17a99a;
+  const BAND_COLOR = 0xcb9b14;
   const BAND_HALF = 0.011; // ~1.8 cm band on a 1.78-unit body
   const BAND_PUSH = 0.005;
   const LABEL_GAP = 32;
@@ -84,13 +84,13 @@
     controls.maxPolarAngle = Math.PI * 0.62;
     controls.target.set(0, 0.92, 0);
 
-    scene.add(new THREE.HemisphereLight(0xffffff, 0xc7a4b6, 0.42));
+    scene.add(new THREE.HemisphereLight(0xffffff, 0xe7d6a2, 0.42));
 
     const keyLight = new THREE.DirectionalLight(0xffffff, 0.95);
     keyLight.position.set(2.2, 3.6, 2.6);
     scene.add(keyLight);
 
-    const fillLight = new THREE.DirectionalLight(0xfbe6ef, 0.28);
+    const fillLight = new THREE.DirectionalLight(0xf5f3ec, 0.28);
     fillLight.position.set(-3, 2.2, 1.5);
     scene.add(fillLight);
 
@@ -100,7 +100,7 @@
 
     const shadow = new THREE.Mesh(
       new THREE.CircleGeometry(0.62, 48),
-      new THREE.MeshBasicMaterial({ color: 0x8a5a74, transparent: true, opacity: 0.16 })
+      new THREE.MeshBasicMaterial({ color: 0x044625, transparent: true, opacity: 0.16 })
     );
     shadow.rotation.x = -Math.PI / 2;
     shadow.position.y = 0.002;
@@ -209,7 +209,7 @@
 
   function materialForModel() {
     return new THREE.MeshStandardMaterial({
-      color: 0xc98fa9,
+      color: 0x84ab85,
       roughness: 0.86,
       metalness: 0.02,
       side: THREE.DoubleSide,
@@ -742,7 +742,7 @@
     };
     const points = line.points.map(project);
     ctx.save();
-    ctx.strokeStyle = '#17a99a';
+    ctx.strokeStyle = '#cb9b14';
     ctx.lineWidth = Math.max(1.6 * ratio, 1.5);
     ctx.lineCap = 'round';
     ctx.setLineDash([4.5 * ratio, 3.5 * ratio]);
@@ -753,7 +753,7 @@
     });
     ctx.stroke();
     ctx.setLineDash([]);
-    ctx.fillStyle = '#17a99a';
+    ctx.fillStyle = '#cb9b14';
     [points[0], points[points.length - 1]].forEach(point => {
       ctx.beginPath();
       ctx.arc(point.x, point.y, 3.2 * ratio, 0, Math.PI * 2);
@@ -840,11 +840,11 @@
 
   /* ---------- posture analysis panes ---------- */
 
-  const POSTURE_HEAD = '#ef9f2a';
-  const POSTURE_TEAL = '#17a99a';
-  const POSTURE_INK = '#3b2f34';
-  const POSTURE_MUTED = '#8a7c82';
-  const POSTURE_DASH = '#c3b7bd';
+  const POSTURE_HEAD = '#cb9b14';
+  const POSTURE_TEAL = '#086a2e';
+  const POSTURE_INK = '#10291b';
+  const POSTURE_MUTED = '#52665a';
+  const POSTURE_DASH = '#aebfaf';
 
   const postureState = {
     options: null,
@@ -1101,7 +1101,7 @@
     state.bandEntries.forEach(entry => { entry.mesh.visible = false; });
     const shadowVisible = state.shadow ? state.shadow.visible : null;
     if (state.shadow) state.shadow.visible = false;
-    tintModel(0xc9c3c6);
+    tintModel(0xc9d3ca);
 
     const camera = postureCamera(cssW / cssH, side);
     drawPostureBackdrop(ctx, cssW, cssH, camera, side);
@@ -1119,7 +1119,7 @@
     state.renderer.setSize(stageW, stageH, false);
     state.renderer.setViewport(0, 0, stageW, stageH);
     state.renderer.render(state.scene, state.camera);
-    tintModel(0xc98fa9);
+    tintModel(0x84ab85);
     if (state.shadow && shadowVisible !== null) state.shadow.visible = shadowVisible;
     state.bandEntries.forEach((entry, index) => { entry.mesh.visible = visibility[index]; });
 

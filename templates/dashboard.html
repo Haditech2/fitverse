@@ -1,17 +1,28 @@
 {% extends "base.html" %}
+{% load static %}
 
 {% block title %}Dashboard | Fitverse AI{% endblock %}
 {% block page_title %}Your style space{% endblock %}
 
 {% block content %}
+{% static 'assets/looks/glamour-corset-360.webp' as MediaA %}
+{% static 'assets/looks/ankara-layered-360.webp' as MediaB %}
+{% static 'assets/looks/green-peplum-360.webp' as MediaC %}
+{% static 'assets/looks/kaftan-living-360.webp' as MediaD %}
 <section class="dashboard-hero">
   <div class="dashboard-hero-copy">
-    <div class="eyebrow" style="color:#e9c7d9">Your style space</div>
+    <div class="eyebrow" style="color:#EEC95C">Your style space</div>
     <h2>Welcome{% if request.user.is_authenticated %}, {{ request.user.first_name|default:request.user.username }}{% endif %}.</h2>
     <p>Something new is waiting to be discovered. Explore traditional Senator styles, Ankara prints, or test a virtual try-on with FASHN VTON 1.5.</p>
     <a class="button light" href="{% url 'style_intelligence' %}">Open AI Stylist Studio ↗</a>
   </div>
-  <img src="https://images.unsplash.com/photo-1529139574466-a303027c1d8b?auto=format&fit=crop&w=900&q=85" alt="Contemporary fashion">
+  <img
+    src="{% static 'assets/looks/ankara-shirt-720.webp' %}"
+    srcset="{% static 'assets/looks/ankara-shirt-360.webp' %} 360w, {% static 'assets/looks/ankara-shirt-720.webp' %} 720w"
+    sizes="(max-width:760px) calc(100vw - 32px), 44vw"
+    width="720"
+    height="1199"
+    alt="Yellow and blue Ankara shirt on grey wall">
 </section>
 
 <div class="panel-head">
@@ -20,25 +31,25 @@
 </div>
 
 <div class="quick-grid">
-  <a class="quick-link" href="{% url 'tryon' %}">
+  <a class="quick-link" href="{% url 'tryon' %}" data-glass data-glass-tone="cream" data-glass-radius="18" data-glass-strength="18">
     <div class="quick-icon">◉</div>
     <strong>Virtual Try-On</strong>
     <span>Preview outfits on your photo</span>
   </a>
-  <a class="quick-link" href="{% url 'measurements' %}">
+  <a class="quick-link" href="{% url 'measurements' %}" data-glass data-glass-tone="gold" data-glass-radius="18" data-glass-strength="18">
     <div class="quick-icon">↔</div>
     <strong>Measurements</strong>
     <span>Keep your fit profile current</span>
   </a>
-  <a class="quick-link" href="{% url 'style_intelligence' %}">
+  <a class="quick-link" href="{% url 'style_intelligence' %}" data-glass data-glass-tone="cream" data-glass-radius="18" data-glass-strength="18">
     <div class="quick-icon">✳</div>
     <strong>Style Intelligence</strong>
     <span>Chat with your AI stylist</span>
   </a>
-  <a class="quick-link" href="{% url 'designs' %}">
+  <a class="quick-link" href="{% url 'designs' %}" data-glass data-glass-tone="gold" data-glass-radius="18" data-glass-strength="18">
     <div class="quick-icon">◇</div>
     <strong>Explore Designs</strong>
-    <span>Discover bespoke pieces</span>
+    <span>Browse Senator, Ankara, and formal looks</span>
   </a>
 </div>
 
@@ -56,7 +67,12 @@
     <article class="product-card" data-category="{{ design.category.slug }}" data-search="{{ design.title }} {{ design.search_keywords }}">
       <div class="product-image">
         <a href="{% url 'design_detail' design.slug %}">
-          <img loading="lazy" src="{{ design.image_url }}" alt="{{ design.title }}">
+          {% if "upload.wikimedia.org" in design.image_url %}
+          <img loading="lazy" decoding="async" src="{% cycle MediaA MediaB MediaC MediaD %}" width="360" height="639" alt="{{ design.title }}">
+          {% else %}
+          <img loading="lazy" decoding="async" data-smart-image="card" data-source="{{ design.image_url }}" width="900" height="1200" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==" alt="{{ design.title }}">
+          <noscript><img loading="lazy" width="900" height="1200" src="{{ design.image_url }}" alt="{{ design.title }}"></noscript>
+          {% endif %}
         </a>
         <button class="heart" aria-label="Save {{ design.title }}" data-favorite="{{ design.id }}">♡</button>
       </div>

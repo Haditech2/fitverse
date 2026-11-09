@@ -3,16 +3,22 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#044625">
   <title>Create account | Fitverse AI</title>
-  <link rel="stylesheet" href="{% static 'assets/styles.css' %}">
+  <link rel="icon" href="{% static 'assets/brand/fitverse-mark.webp' %}" type="image/webp">
+  <link rel="stylesheet" href="{% static 'assets/styles.css' %}?v=10">
+  <link rel="stylesheet" href="{% static 'assets/vendor/scrolljs.css' %}?v=2.0.1">
+  <link rel="stylesheet" href="{% static 'assets/experience.css' %}?v=13">
 </head>
-<body>
-  <main class="auth-layout">
+<body class="page-signup">
+  <a class="skip-link" href="#top">Skip to content</a>
+  {% include "includes/brand_loader.html" %}
+  <main class="auth-layout" id="top">
     <section class="auth-visual">
-      <img src="https://images.unsplash.com/photo-1509631179647-0177331693ae?auto=format&fit=crop&w=900&q=85" alt="Fashion tailoring">
+      <img src="{% static 'assets/looks/ankara-shirt-720.webp' %}" width="720" height="1199" loading="lazy" alt="Traditional tailoring">
       <div class="auth-caption">
-        <div class="eyebrow" style="color:#f2dbe8">Fitverse AI</div>
+        <div class="eyebrow" style="color:#EEC95C">Fitverse AI</div>
         <h2>Bespoke fashion,<br>reimagined.</h2>
         <p>Curate traditional and modern looks tailored to your exact measurements.</p>
       </div>
@@ -21,7 +27,7 @@
     <section class="auth-content">
       <form class="auth-form" method="POST" action="{% url 'signup' %}">
         {% csrf_token %}
-        <a class="logo" href="{% url 'home' %}">Fitverse<span> AI</span></a>
+        <a class="logo" href="{% url 'home' %}"><img class="brand-wordmark" src="{% static 'assets/brand/fitverse-wordmark-320.webp' %}" width="320" height="80" alt="FitVerse AI"></a>
         <h1>Create your account</h1>
         <p>Build your style profile and try on outfits virtually.</p>
 
@@ -58,6 +64,8 @@
     </section>
   </main>
   <div id="toast" class="toast"></div>
-  <script src="{% static 'assets/app.js' %}"></script>
+  <script src="{% static 'assets/vendor/scroll.umd.js' %}?v=2.0.1"></script>
+  <script src="{% static 'assets/app.js' %}?v=21"></script>
+  <script src="{% static 'assets/scroll.js' %}?v=5"></script>
 </body>
 </html>

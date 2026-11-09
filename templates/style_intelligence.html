@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load static %}
 
 {% block title %}Style Intelligence & Virtual Fitting | Fitverse AI{% endblock %}
 {% block page_title %}Style Intelligence{% endblock %}
@@ -117,7 +118,7 @@
         </div>
         <div class="ag-body">
           <div class="ag-img-wrap">
-            <img id="ag-image" src="{{ initial_garment.image_url|default:'https://images.unsplash.com/photo-1617137968427-85924c800a22?auto=format&fit=crop&w=900&q=85' }}" alt="Active garment">
+            <img id="ag-image" src="{{ initial_garment.image_url|default:'/static/assets/looks/senator-white-401.webp' }}" alt="Active garment">
           </div>
           <div class="ag-details">
             <h4 id="ag-title">{{ initial_garment.title|default:"Classic Senator Set" }}</h4>
@@ -190,11 +191,11 @@
       <!-- Canvas Stage -->
       <div class="tryon-preview-stage" id="tryon-preview-stage">
         <div class="preview-overlay" id="vton-loader" style="display:none">
-          <div class="spinner"></div>
+          <div class="brand-spinner" aria-hidden="true"><img src="{% static 'assets/brand/fitverse-mark-96.webp' %}" width="96" height="81" loading="lazy" alt=""></div>
           <p><strong id="vton-loader-title">FASHN VTON 1.5 Neural Rendering...</strong></p>
           <span class="sub-loader" id="vton-loader-step">Pixel-space diffusion in progress</span>
         </div>
-        <img id="vton-output-image" src="https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=900&q=85" alt="Virtual try-on result">
+        <img id="vton-output-image" src="/static/assets/looks/set-mudcloth-720.webp" width="720" height="900" alt="Virtual try-on result">
         <div class="result-badge" id="result-badge">Model Ready</div>
       </div>
 
@@ -238,22 +239,22 @@
   </div>
   <div class="collection-grid">
     <a class="collection-card" href="{% url 'designs' %}?category=senator">
-      <img src="https://images.unsplash.com/photo-1617137968427-85924c800a22?auto=format&fit=crop&w=900&q=85" alt="Senator tailoring">
+      <img src="{% static 'assets/looks/senator-white-401.webp' %}" width="401" height="539" loading="lazy" alt="Senator tailoring">
       <h3>Modern Senator</h3>
       <p>Refined Nigerian native tailoring</p>
     </a>
     <a class="collection-card" href="{% url 'designs' %}?category=ankara">
-      <img src="https://upload.wikimedia.org/wikipedia/commons/4/4d/Ankara_dress.jpg" alt="Ankara celebration">
+      <img src="{% static 'assets/looks/ankara-feather-400.webp' %}" width="400" height="502" loading="lazy" alt="Ankara celebration">
       <h3>Ankara Expressions</h3>
       <p>Vibrant African wax prints</p>
     </a>
     <a class="collection-card" href="{% url 'designs' %}?category=occasion">
-      <img src="https://images.unsplash.com/photo-1525507119028-ed4c629a60a3?auto=format&fit=crop&w=900&q=85" alt="Occasion luxury">
+      <img src="{% static 'assets/looks/glamour-corset-401.webp' %}" width="401" height="712" loading="lazy" alt="Occasion luxury">
       <h3>Owambe & Gala</h3>
       <p>Grand evening statements</p>
     </a>
     <a class="collection-card" href="{% url 'designs' %}?category=formal">
-      <img src="https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=900&q=85" alt="Contemporary formal">
+      <img src="{% static 'assets/looks/set-pleat-720.webp' %}" width="720" height="960" loading="lazy" alt="Contemporary formal">
       <h3>Executive Tailoring</h3>
       <p>Boardroom precision & comfort</p>
     </a>

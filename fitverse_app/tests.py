@@ -8,13 +8,14 @@ from unittest import mock
 
 from django.core.files.base import ContentFile
 from django.core.files.uploadedfile import SimpleUploadedFile
+from django.core.cache import cache
 from django.test import SimpleTestCase, TestCase, override_settings
 from django.utils import timezone
 from PIL import Image
 
 from . import views
-from .models import UserMeasurement
-from .services import bodygram, gemini_ai
+from .models import Category, Design, UserMeasurement
+from .services import bodygram, gemini_ai, look360
 
 
 class TryOnFallbackTests(SimpleTestCase):
@@ -155,6 +156,79 @@ class TryOnApiTests(TestCase):
         )
 
         self.assertEqual(response.status_code, 400)
+
+
+class Look360ApiTests(TestCase):
+    """The image-to-3D relay keeps the key private and never duplicates a task."""
+
+    def setUp(self):
+        media_root = tempfile.mkdtemp(prefix="fitverse-look360-")
+        self.media_root = Path(media_root)
+        self.addCleanup(shutil.rmtree, media_root, True)
+        self.media_override = override_settings(MEDIA_ROOT=media_root)
+        self.media_override.enable()
+        self.addCleanup(self.media_override.disable)
+        cache.clear()
+        self.addCleanup(cache.clear)
+
+        category = Category.objects.create(name="Test", slug="test")
+        self.design = Design.objects.create(
+            title="Test Design",
+            slug="test-design",
+            category=category,
+            image_url="https://example.com/design.webp",
+            description="A test design.",
+        )
+        self.url = "/api/look360/designs/test-design/"
+
+    def _post(self, payload=None):
+        return self.client.post(
+            self.url,
+            data=json.dumps(payload or {}),
+            content_type="application/json",
+        )
+
+    def test_missing_key_returns_clearly_labelled_demo(self):
+        with mock.patch.object(look360, "get_api_key", return_value=""):
+            response = self._post()
+
+        payload = response.json()
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(payload["state"], "ready")
+        self.assertTrue(payload["demo"])
+        self.assertEqual(payload["model_url"], look360.DEMO_MODEL_URL)
+
+    def test_pending_task_is_reused_after_cache_reset(self):
+        pending = {"status": "PENDING", "progress": 12}
+        with mock.patch.object(look360, "get_api_key", return_value="key"), \
+                mock.patch.object(look360, "create_task", return_value="task-123") as create, \
+                mock.patch.object(look360, "get_task", return_value=pending):
+            first = self._post().json()
+            cache.clear()  # simulate an autoreload/new worker
+            second = self._post().json()
+
+        self.assertEqual(first["task_id"], "task-123")
+        self.assertEqual(second["task_id"], "task-123")
+        create.assert_called_once()
+
+    def test_successful_model_is_saved_under_media(self):
+        complete = {
+            "status": "SUCCEEDED",
+            "progress": 100,
+            "model_urls": {"glb": "https://example.com/model.glb"},
+        }
+        model_bytes = b"glTF" + (b"\x00" * 32)
+        with mock.patch.object(look360, "get_api_key", return_value="key"), \
+                mock.patch.object(look360, "create_task", return_value="task-456"), \
+                mock.patch.object(look360, "get_task", return_value=complete), \
+                mock.patch.object(look360, "download_model", return_value=model_bytes):
+            response = self._post()
+
+        payload = response.json()
+        self.assertEqual(payload["state"], "ready")
+        self.assertFalse(payload["demo"])
+        self.assertEqual(payload["model_url"], "/media/look360/test-design.glb")
+        self.assertTrue((self.media_root / "look360" / "test-design.glb").is_file())
 
 
 class GeminiServiceTests(SimpleTestCase):
