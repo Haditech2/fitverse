@@ -5,6 +5,7 @@ import tempfile
 from io import BytesIO
 from pathlib import Path
 from unittest import mock
+from urllib.error import HTTPError
 
 from django.core.files.base import ContentFile
 from django.core.files.uploadedfile import SimpleUploadedFile
@@ -15,7 +16,7 @@ from PIL import Image
 
 from . import views
 from .models import Category, Design, UserMeasurement
-from .services import bodygram, gemini_ai, look360
+from .services import bodygram, fashn_vton, gemini_ai, look360
 
 
 class TryOnFallbackTests(SimpleTestCase):
@@ -33,7 +34,7 @@ class TryOnFallbackTests(SimpleTestCase):
             garment_photo_type="model",
         )
 
-    @override_settings(AI_PROVIDER="gemini", GEMINI_API_KEY="test-key")
+    @override_settings(AI_PROVIDER="gemini", TRYON_PROVIDER="", GEMINI_API_KEY="test-key")
     def test_gemini_result_is_used_when_available(self):
         with mock.patch.object(
             views, "generate_gemini_try_on", return_value="/media/tryons/gemini.png"
@@ -44,7 +45,7 @@ class TryOnFallbackTests(SimpleTestCase):
         gemini.assert_called_once()
         fashn.assert_not_called()
 
-    @override_settings(AI_PROVIDER="gemini", GEMINI_API_KEY="test-key")
+    @override_settings(AI_PROVIDER="gemini", TRYON_PROVIDER="", GEMINI_API_KEY="test-key")
     def test_gemini_failure_falls_back_to_fashn(self):
         with mock.patch.object(
             views, "generate_gemini_try_on", side_effect=views.GeminiError("quota exhausted")
@@ -56,7 +57,7 @@ class TryOnFallbackTests(SimpleTestCase):
         self.assertEqual(result, ("/media/tryons/fashn.png", "fashn"))
         fashn.assert_called_once()
 
-    @override_settings(AI_PROVIDER="gemini", GEMINI_API_KEY="test-key")
+    @override_settings(AI_PROVIDER="gemini", TRYON_PROVIDER="", GEMINI_API_KEY="test-key")
     def test_uploads_are_rewound_before_fallback(self):
         # Gemini consumes the upload streams, so the fallback must still receive full bytes.
         def consume(**kwargs):
@@ -87,6 +88,15 @@ class TryOnFallbackTests(SimpleTestCase):
         self.assertEqual(result, ("/media/tryons/fashn.png", "fashn"))
         gemini.assert_not_called()
 
+    @override_settings(AI_PROVIDER="gemini", TRYON_PROVIDER="fashn", GEMINI_API_KEY="test-key")
+    def test_try_on_provider_overrides_the_stylist_provider(self):
+        with mock.patch.object(views, "generate_gemini_try_on") as gemini, \
+                mock.patch.object(views, "generate_try_on", return_value="/media/tryons/fashn.png"):
+            result = self._call()
+
+        self.assertEqual(result, ("/media/tryons/fashn.png", "fashn"))
+        gemini.assert_not_called()
+
     @override_settings(AI_PROVIDER="gemini", GEMINI_API_KEY="")
     def test_missing_gemini_key_uses_fashn(self):
         with mock.patch.object(views, "generate_gemini_try_on") as gemini, \
@@ -96,7 +106,7 @@ class TryOnFallbackTests(SimpleTestCase):
         self.assertEqual(result, ("/media/tryons/fashn.png", "fashn"))
         gemini.assert_not_called()
 
-    @override_settings(AI_PROVIDER="gemini", GEMINI_API_KEY="test-key")
+    @override_settings(AI_PROVIDER="gemini", TRYON_PROVIDER="", GEMINI_API_KEY="test-key")
     def test_both_providers_failing_raises_try_on_error(self):
         with mock.patch.object(
             views, "generate_gemini_try_on", side_effect=views.GeminiError("quota exhausted")
@@ -670,3 +680,100 @@ class BodygramEndpointTests(TestCase):
         buffer = BytesIO()
         Image.new("RGB", (width, height), (120, 110, 100)).save(buffer, format="PNG")
         return buffer.getvalue()
+
+
+class FashnApiTests(SimpleTestCase):
+    """Official FASHN API transport (used whenever FASHN_API_KEY is set)."""
+
+    def setUp(self):
+        media_root = tempfile.mkdtemp(prefix="fitverse-fashn-")
+        self.addCleanup(shutil.rmtree, media_root, True)
+        self.media_override = override_settings(MEDIA_ROOT=media_root)
+        self.media_override.enable()
+        self.addCleanup(self.media_override.disable)
+
+        self.person = SimpleUploadedFile(
+            "person.jpg", b"person-bytes", content_type="image/jpeg"
+        )
+        self.garment = SimpleUploadedFile(
+            "garment.jpg", b"garment-bytes", content_type="image/jpeg"
+        )
+
+    def _call(self, **overrides):
+        kwargs = {
+            "person_image": self.person,
+            "garment_image": self.garment,
+            "category": "tops",
+        }
+        kwargs.update(overrides)
+        return fashn_vton.generate_try_on(**kwargs)
+
+    @override_settings(FASHN_API_KEY="test-key")
+    def test_payload_uses_data_uris_and_saves_the_result(self):
+        responses = [
+            {"id": "pred_1"},
+            {"status": "processing", "error": None},
+            {"status": "completed", "output": ["https://cdn.fashn.ai/pred_1/output_0.png"]},
+        ]
+        with mock.patch.object(
+            fashn_vton, "_api_request", side_effect=responses
+        ) as api, mock.patch.object(
+            fashn_vton, "_download_output", return_value=b"png-bytes"
+        ) as download, mock.patch.object(fashn_vton.time, "sleep"):
+            url = self._call()
+
+        payload = api.call_args_list[0].kwargs["payload"]
+        self.assertEqual(payload["model_name"], "tryon-v1.6")
+        inputs = payload["inputs"]
+        self.assertTrue(inputs["model_image"].startswith("data:image/jpeg;base64,"))
+        self.assertTrue(inputs["garment_image"].startswith("data:image/jpeg;base64,"))
+        self.assertEqual(inputs["category"], "tops")
+        self.assertEqual(inputs["output_format"], "png")
+        self.assertEqual(api.call_args_list[1].args[0], "/status/pred_1")
+
+        download.assert_called_once_with("https://cdn.fashn.ai/pred_1/output_0.png")
+        self.assertTrue(url.startswith("/media/tryons/"))
+        saved = Path(self.media_override.options["MEDIA_ROOT"], "tryons", url.rsplit("/", 1)[1])
+        self.assertEqual(saved.read_bytes(), b"png-bytes")
+
+    @override_settings(FASHN_API_KEY="test-key")
+    def test_runtime_pose_error_has_a_clear_message(self):
+        responses = [
+            {"id": "pred_2"},
+            {"status": "failed", "error": {"name": "PoseError", "message": "No pose detected"}},
+        ]
+        with mock.patch.object(fashn_vton, "_api_request", side_effect=responses), mock.patch.object(
+            fashn_vton.time, "sleep"
+        ):
+            with self.assertRaisesMessage(fashn_vton.FashnVtonError, "full-body pose"):
+                self._call()
+
+    def test_invalid_key_is_reported_clearly(self):
+        error = HTTPError(
+            "https://api.fashn.ai/v1/run",
+            401,
+            "Unauthorized",
+            {},
+            BytesIO(b'{"error":"UnauthorizedAccess","message":"Unauthorized: Invalid token"}'),
+        )
+        self.assertIn("API key", str(fashn_vton._http_error(error)))
+
+    def test_out_of_credits_is_reported_clearly(self):
+        error = HTTPError(
+            "https://api.fashn.ai/v1/run",
+            429,
+            "Too Many Requests",
+            {},
+            BytesIO(b'{"error":"OutOfCredits","message":"No API credits remaining"}'),
+        )
+        self.assertIn("credits are used up", str(fashn_vton._http_error(error)))
+
+    def test_without_a_key_the_free_space_is_used(self):
+        with mock.patch.object(
+            fashn_vton, "_generate_via_space", return_value="/media/tryons/space.png"
+        ) as space:
+            url = self._call(garment_photo_type="flat-lay")
+
+        self.assertEqual(url, "/media/tryons/space.png")
+        space.assert_called_once()
+        self.assertFalse(fashn_vton.get_api_key())

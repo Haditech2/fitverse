@@ -40,7 +40,10 @@ def _generate_try_on(*, person_image, garment_image, category, garment_photo_typ
     is the configured provider and an API key is present; any Gemini failure is
     logged and retried once through the FASHN Space.
     """
-    provider = getattr(settings, 'AI_PROVIDER', 'gemini')
+    provider = (
+        getattr(settings, 'TRYON_PROVIDER', '')
+        or getattr(settings, 'AI_PROVIDER', 'gemini')
+    )
     use_gemini = provider == 'gemini' and bool(getattr(settings, 'GEMINI_API_KEY', ''))
     failures = []
 

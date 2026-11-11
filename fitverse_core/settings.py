@@ -112,6 +112,9 @@ MEDIA_ROOT = BASE_DIR / 'media'
 DATA_UPLOAD_MAX_MEMORY_SIZE = 12 * 1024 * 1024
 FILE_UPLOAD_MAX_MEMORY_SIZE = 12 * 1024 * 1024
 
+FASHN_API_KEY = os.getenv('FASHN_API_KEY', '')
+FASHN_API_URL = os.getenv('FASHN_API_URL', 'https://api.fashn.ai/v1')
+FASHN_MODEL = os.getenv('FASHN_MODEL', 'tryon-v1.6')
 FASHN_VTON_SPACE = os.getenv('FASHN_VTON_SPACE', 'fashn-ai/fashn-vton-1.5')
 HF_TOKEN = os.getenv('HF_TOKEN', '')
 GEMINI_API_KEY = os.getenv('GEMINI_API_KEY', '')
@@ -128,6 +131,10 @@ GEMINI_IMAGE_FALLBACKS = tuple(
     if model.strip()
 )
 AI_PROVIDER = os.getenv('AI_PROVIDER', 'gemini')
+# Try-on image provider, separate from the stylist text provider above so FASHN
+# can render outfits while Gemini still writes the style advice. Empty means
+# "use AI_PROVIDER".
+TRYON_PROVIDER = os.getenv('TRYON_PROVIDER', '')
 
 BODYGRAM_ORG_ID = os.getenv('BODYGRAM_ORG_ID', '')
 BODYGRAM_API_KEY = os.getenv('BODYGRAM_API_KEY', '')
