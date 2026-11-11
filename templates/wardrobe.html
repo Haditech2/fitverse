@@ -18,12 +18,103 @@
 </div>
 
 <div class="wardrobe-tabs">
-  <button class="active" data-choice onclick="showWardrobeTab('favorites')">Saved favorites ({{ favorites.count }})</button>
+  <button class="active" data-choice onclick="showWardrobeTab('clothes')">My clothes ({{ wardrobe_items|length }})</button>
+  <button data-choice onclick="showWardrobeTab('favorites')">Saved favorites ({{ favorites.count }})</button>
   <button data-choice onclick="showWardrobeTab('looks')">Try-on history ({{ saved_looks.count }})</button>
 </div>
 
+<!-- My clothes + AI outfit picker -->
+<div id="tab-clothes">
+  <div class="wardrobe-studio">
+    <div class="wardrobe-closet">
+      <section class="panel wardrobe-upload-panel">
+        <label class="wardrobe-drop" for="wardrobe-files">
+          <span class="wardrobe-drop-icon" aria-hidden="true">＋</span>
+          <strong>Add clothes to your wardrobe</strong>
+          <span>Photograph each piece on a hanger, a flat lay, or on you. JPEG, PNG, or WebP, up to 12&nbsp;MB.</span>
+          <input id="wardrobe-files" type="file" accept="image/jpeg,image/png,image/webp" multiple onchange="wardrobeUpload(this.files); this.value='';">
+        </label>
+        <div class="wardrobe-upload-meta">
+          <small><span id="wardrobe-count">{{ wardrobe_items|length }} of {{ wardrobe_limit }} pieces</span> · photos stay private to this account</small>
+          <p id="wardrobe-upload-status" class="wardrobe-status" role="status" aria-live="polite" hidden></p>
+        </div>
+      </section>
+
+      <div id="wardrobe-grid" class="wardrobe-grid{% if not wardrobe_items %} is-empty{% endif %}">
+        {% for item in wardrobe_items %}
+        <article class="wardrobe-item" data-item-id="{{ item.id }}">
+          <div class="wardrobe-item-media">
+            <img src="{% url 'wardrobe_item_thumb' item.id %}" alt="{{ item.name|default:'Wardrobe item' }}" loading="lazy" decoding="async">
+            <button type="button" class="wardrobe-item-delete" aria-label="Remove {{ item.name|default:'this piece' }}" onclick="wardrobeDelete({{ item.id }})">×</button>
+            <span class="wardrobe-item-worn"{% if not item.wear_count %} hidden{% endif %}>Worn {{ item.wear_count }}×</span>
+          </div>
+          <div class="wardrobe-item-body">
+            <strong class="wardrobe-item-name">{{ item.name|default:"Untitled piece" }}</strong>
+            <div class="wardrobe-item-meta">
+              <span class="tag">{{ item.get_category_display }}</span>
+              {% for colour in item.colours %}<span class="wardrobe-colour">{{ colour }}</span>{% endfor %}
+            </div>
+            {% if not item.tagged %}
+            <button type="button" class="text-button wardrobe-retag" onclick="wardrobeTag({{ item.id }})">Tag with AI</button>
+            {% endif %}
+          </div>
+        </article>
+        {% endfor %}
+      </div>
+
+      <div id="wardrobe-empty" class="empty-state"{% if wardrobe_items %} hidden{% endif %}>
+        <h3>No clothes uploaded yet</h3>
+        <p>Add a few tops, bottoms, or a dress and the stylist can start building outfits from what you already own.</p>
+      </div>
+    </div>
+
+    <aside class="panel wardrobe-dress">
+      <div class="eyebrow">AI stylist</div>
+      <h3>What should I wear?</h3>
+      <p class="muted">Tell us where you are going. The stylist reads your wardrobe and puts together complete outfits.</p>
+
+      <div class="field">
+        <label for="wardrobe-occasion">Where are you going?</label>
+        <select id="wardrobe-occasion">
+          <option value="work">Work / office</option>
+          <option value="church">Church</option>
+          <option value="owambe">Owambe / celebration</option>
+          <option value="date">Date night</option>
+          <option value="casual">Casual day out</option>
+          <option value="travel">Travel</option>
+          <option value="other">Something else</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label for="wardrobe-weather">Weather (optional)</label>
+        <input id="wardrobe-weather" type="text" maxlength="80" placeholder="Hot and dry, about 32°C">
+      </div>
+
+      <div class="field">
+        <label for="wardrobe-note">Anything else? (optional)</label>
+        <textarea id="wardrobe-note" rows="3" maxlength="300" placeholder="I want to look sharp but stay comfortable"></textarea>
+      </div>
+
+      <button type="button" id="wardrobe-recommend" onclick="wardrobeRecommend()">Dress me</button>
+      <p id="wardrobe-status" class="wardrobe-status" role="status" aria-live="polite" hidden></p>
+    </aside>
+  </div>
+
+  <section id="wardrobe-results" class="wardrobe-results" hidden>
+    <div class="wardrobe-results-head">
+      <div>
+        <div class="eyebrow">Styled for you</div>
+        <h3 id="wardrobe-results-title">Outfit ideas</h3>
+      </div>
+      <button type="button" class="button secondary" onclick="wardrobeRecommend()">Shuffle ideas</button>
+    </div>
+    <div id="wardrobe-outfits" class="wardrobe-outfits"></div>
+  </section>
+</div>
+
 <!-- Favorites Section -->
-<div id="tab-favorites" class="product-grid">
+<div id="tab-favorites" class="product-grid" style="display:none;">
   {% for fav in favorites %}
     <article class="product-card" data-category="{{ fav.design.category.slug }}">
       <div class="product-image">
@@ -74,18 +165,28 @@
 </div>
 {% endblock content %}
 
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'assets/wardrobe.css' %}?v=1">
+{% endblock %}
+
 {% block extra_scripts %}
+<script src="{% static 'assets/wardrobe.js' %}?v=1"></script>
 <script>
 function showWardrobeTab(tab){
-  const favEl = document.getElementById('tab-favorites');
-  const looksEl = document.getElementById('tab-looks');
-  if(tab === 'favorites'){
-    favEl.style.display = 'grid';
-    looksEl.style.display = 'none';
-  } else {
-    favEl.style.display = 'none';
-    looksEl.style.display = 'grid';
-  }
+  const panels = {
+    clothes: document.getElementById('tab-clothes'),
+    favorites: document.getElementById('tab-favorites'),
+    looks: document.getElementById('tab-looks')
+  };
+  Object.entries(panels).forEach(([name, el]) => {
+    if(!el) return;
+    el.style.display = name === tab ? '' : 'none';
+  });
+  document.querySelectorAll('.wardrobe-tabs button').forEach(button => {
+    button.classList.toggle('active', button.textContent.trim().toLowerCase().startsWith(
+      tab === 'clothes' ? 'my clothes' : tab === 'favorites' ? 'saved favorites' : 'try-on history'
+    ));
+  });
 }
 </script>
 {% endblock %}

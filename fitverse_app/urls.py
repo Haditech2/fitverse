@@ -29,4 +29,14 @@ urlpatterns = [
     path('api/favorite/toggle/', views.api_toggle_favorite, name='api_toggle_favorite'),
     path('api/looks/save/', views.api_save_look, name='api_save_look'),
     path('api/look360/designs/<slug:slug>/', views.api_look360, name='api_look360'),
+
+    # Personal wardrobe
+    path('api/wardrobe/upload/', views.api_wardrobe_upload, name='api_wardrobe_upload'),
+    path('api/wardrobe/items/<int:item_id>/tag/', views.api_wardrobe_tag, name='api_wardrobe_tag'),
+    path('api/wardrobe/items/<int:item_id>/update/', views.api_wardrobe_update, name='api_wardrobe_update'),
+    path('api/wardrobe/items/<int:item_id>/delete/', views.api_wardrobe_delete, name='api_wardrobe_delete'),
+    path('api/wardrobe/recommend/', views.api_wardrobe_recommend, name='api_wardrobe_recommend'),
+    path('api/wardrobe/worn/', views.api_wardrobe_worn, name='api_wardrobe_worn'),
+    path('wardrobe/items/<int:item_id>/photo/', views.wardrobe_item_photo, name='wardrobe_item_photo'),
+    path('wardrobe/items/<int:item_id>/thumb/', views.wardrobe_item_thumb, name='wardrobe_item_thumb'),
 ]

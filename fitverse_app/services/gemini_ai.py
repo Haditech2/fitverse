@@ -203,3 +203,176 @@ def generate_try_on(*, person_image, garment_image, category):
         raise
     except Exception as exc:
         raise GeminiError(_image_error(exc)) from exc
+
+
+# ---------------------------------------------------------------------------
+# Personal wardrobe: tag each photo, then build outfits from the collection.
+# ---------------------------------------------------------------------------
+
+WARDROBE_CATEGORIES = {
+    'top', 'bottom', 'dress', 'outerwear', 'shoes', 'accessory', 'other',
+}
+WARDROBE_FORMALITY = {'casual', 'smart-casual', 'formal'}
+WARDROBE_SEASONS = {'hot', 'mild', 'cold', 'all'}
+
+
+def _parse_json(raw):
+    raw = (raw or '').strip()
+    if raw.startswith('```'):
+        raw = raw[3:]
+        if raw.lstrip().lower().startswith('json'):
+            raw = raw.lstrip()[4:]
+        raw = raw.strip()
+        if raw.endswith('```'):
+            raw = raw[:-3].strip()
+    return json.loads(raw)
+
+
+def _clean_text(value, *, limit=60):
+    return ' '.join(str(value or '').split())[:limit]
+
+
+def _clean_list(value, *, allowed=None, limit=5):
+    if isinstance(value, str):
+        value = [value]
+    if not isinstance(value, (list, tuple)):
+        return []
+    cleaned = []
+    for entry in value:
+        item = _clean_text(entry, limit=40).lower()
+        if not item:
+            continue
+        if allowed is not None and item not in allowed:
+            continue
+        if item not in cleaned:
+            cleaned.append(item)
+        if len(cleaned) >= limit:
+            break
+    return cleaned
+
+
+def tag_wardrobe_image(image_bytes, mime_type='image/jpeg', filename=''):
+    """Read one clothing photo and return structured wardrobe tags."""
+    prompt = f"""
+You are Fitverse AI, tagging a photo from a user's own wardrobe.
+Look at the garment and return valid JSON only, with this exact shape:
+{{"name": "short 2-4 word name", "category": "top|bottom|dress|outerwear|shoes|accessory|other",
+  "colours": ["main colour", "other colour"], "pattern": "plain|striped|checked|floral|print|textured|other",
+  "formality": "casual|smart-casual|formal", "seasons": ["hot|mild|cold|all"],
+  "style_tags": ["short descriptors"]}}
+Rules: use lower-case words, at most 3 colours and 4 style tags, never invent details
+you cannot see, and keep the item type honest (a shirt is a top, not a dress).
+File name hint: {_clean_text(filename, limit=80) or 'none'}
+"""
+    models = _model_chain(
+        getattr(settings, "GEMINI_TEXT_MODEL", "gemini-3.6-flash"),
+        getattr(settings, "GEMINI_TEXT_FALLBACKS", ("gemini-3.5-flash", "gemini-3.8-flash")),
+    )
+    try:
+        from google.genai import types
+
+        response = _generate_content(
+            [
+                types.Part.from_bytes(data=image_bytes, mime_type=mime_type),
+                prompt,
+            ],
+            models,
+            timeout_ms=45000,
+        )[0]
+        parsed = _parse_json(response.text)
+    except GeminiError:
+        raise
+    except json.JSONDecodeError as exc:
+        raise GeminiError("The fashion AI could not read this photo's tags. Try again.") from exc
+    except Exception as exc:
+        raise GeminiError(_request_error(exc)) from exc
+
+    if not isinstance(parsed, dict):
+        raise GeminiError("The fashion AI returned incomplete tags. Try again.")
+
+    category = _clean_text(parsed.get('category'), limit=20).lower()
+    formality = _clean_text(parsed.get('formality'), limit=20).lower()
+    return {
+        'name': _clean_text(parsed.get('name'), limit=60) or _clean_text(filename, limit=60),
+        'category': category if category in WARDROBE_CATEGORIES else 'other',
+        'colours': _clean_list(parsed.get('colours'), limit=3),
+        'pattern': _clean_text(parsed.get('pattern'), limit=30).lower(),
+        'formality': formality if formality in WARDROBE_FORMALITY else '',
+        'seasons': _clean_list(parsed.get('seasons'), allowed=WARDROBE_SEASONS, limit=3),
+        'style_tags': _clean_list(parsed.get('style_tags'), limit=4),
+    }
+
+
+def recommend_wardrobe_outfits(*, items, occasion='', weather='', note='', profile=None):
+    """Pick 2-3 outfits from the user's own wardrobe.
+
+    ``items`` is a list of dicts with id/name/category/colours/pattern/
+    formality/seasons and optional wear history. Only metadata is sent, so this
+    is one cheap text call and no image-generation credits.
+    """
+    if len(items) < 2:
+        raise GeminiError('Add at least two pieces to your wardrobe first.')
+
+    catalog = json.dumps(items, ensure_ascii=False)
+    profile_text = ''
+    if profile:
+        profile_text = ', '.join(f'{key}: {value}' for key, value in profile.items() if value)
+
+    prompt = f"""
+You are Fitverse AI, a Nigerian and African fashion stylist building outfits from
+a real person's own wardrobe. Use ONLY the item ids in the wardrobe below and
+never invent clothing that is not listed.
+Return valid JSON only, with this exact shape:
+{{"outfits": [{{"title": "short outfit name", "item_ids": [1, 2],
+  "why": "one or two sentences on why this works for the occasion and colours",
+  "tip": "one practical styling tip"}}]}}
+Give 2 or 3 complete outfits. A complete outfit must cover the body: at least a
+top and a bottom, or a dress. Shoes and accessories are optional extras. Prefer
+pieces that have not been worn recently when they suit the occasion.
+Occasion: {occasion or 'not specified'}
+Weather / temperature: {weather or 'not specified'}
+Extra context from the user: {note or 'none'}
+Body profile: {profile_text or 'not shared'}
+Wardrobe: {catalog}
+"""
+    models = _model_chain(
+        getattr(settings, "GEMINI_TEXT_MODEL", "gemini-3.6-flash"),
+        getattr(settings, "GEMINI_TEXT_FALLBACKS", ("gemini-3.5-flash", "gemini-3.8-flash")),
+    )
+    try:
+        response = _generate_content(prompt, models, timeout_ms=45000)[0]
+        parsed = _parse_json(response.text)
+    except GeminiError:
+        raise
+    except json.JSONDecodeError as exc:
+        raise GeminiError("The fashion AI replied with an unreadable outfit. Try again.") from exc
+    except Exception as exc:
+        raise GeminiError(_request_error(exc)) from exc
+
+    valid_ids = {str(item['id']) for item in items}
+    outfits = []
+    for entry in (parsed.get('outfits') if isinstance(parsed, dict) else None) or []:
+        if not isinstance(entry, dict):
+            continue
+        chosen = []
+        for raw_id in entry.get('item_ids') or []:
+            item_id = str(raw_id)
+            if item_id in valid_ids and item_id not in chosen:
+                chosen.append(item_id)
+        if not chosen:
+            continue
+        outfits.append({
+            'title': _clean_text(entry.get('title'), limit=60) or 'Outfit idea',
+            'item_ids': chosen,
+            'why': _clean_text(entry.get('why'), limit=280),
+            'tip': _clean_text(entry.get('tip'), limit=200),
+        })
+        if len(outfits) == 3:
+            break
+
+    if not outfits:
+        raise GeminiError(
+            'The fashion AI could not build an outfit from these pieces. '
+            'Add a few more tops, bottoms, or a dress and try again.'
+        )
+    return outfits

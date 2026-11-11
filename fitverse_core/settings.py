@@ -109,6 +109,10 @@ STATIC_ROOT = BASE_DIR / 'staticfiles'
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
+# Personal wardrobe photos are private: they are stored outside MEDIA_ROOT and
+# served only through an ownership-checked Django view.
+WARDROBE_ROOT = BASE_DIR / 'private' / 'wardrobe'
+WARDROBE_MAX_ITEMS = int(os.getenv('WARDROBE_MAX_ITEMS', '60'))
 DATA_UPLOAD_MAX_MEMORY_SIZE = 12 * 1024 * 1024
 FILE_UPLOAD_MAX_MEMORY_SIZE = 12 * 1024 * 1024
 

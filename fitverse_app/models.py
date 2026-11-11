@@ -1,6 +1,9 @@
 from django.db import models
 from django.contrib.auth.models import User
 
+from .storage import WardrobeStorage
+
+
 class Category(models.Model):
     name = models.CharField(max_length=100)
     slug = models.SlugField(unique=True)
@@ -97,6 +100,48 @@ class SavedLook(models.Model):
 
     def __str__(self):
         return self.title
+
+
+class WardrobeItem(models.Model):
+    """One piece of clothing the user photographed from their own wardrobe."""
+
+    CATEGORY_CHOICES = [
+        ('top', 'Top / shirt'),
+        ('bottom', 'Trousers / skirt'),
+        ('dress', 'Dress / one-piece'),
+        ('outerwear', 'Jacket / outerwear'),
+        ('shoes', 'Shoes'),
+        ('accessory', 'Bag / accessory'),
+        ('other', 'Other'),
+    ]
+    FORMALITY_CHOICES = [
+        ('casual', 'Casual'),
+        ('smart-casual', 'Smart casual'),
+        ('formal', 'Formal'),
+    ]
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True, related_name='wardrobe_items')
+    session_key = models.CharField(max_length=100, blank=True, db_index=True)
+    name = models.CharField(max_length=120, blank=True)
+    image = models.FileField(storage=WardrobeStorage(), upload_to='photos/')
+    thumb = models.FileField(storage=WardrobeStorage(), upload_to='thumbs/', blank=True)
+    category = models.CharField(max_length=20, choices=CATEGORY_CHOICES, default='other')
+    colours = models.JSONField(default=list, blank=True)
+    pattern = models.CharField(max_length=40, blank=True)
+    formality = models.CharField(max_length=20, choices=FORMALITY_CHOICES, blank=True)
+    seasons = models.JSONField(default=list, blank=True)
+    style_tags = models.JSONField(default=list, blank=True)
+    notes = models.TextField(blank=True)
+    tagged = models.BooleanField(default=False)
+    wear_count = models.PositiveIntegerField(default=0)
+    last_worn = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return self.name or f'Wardrobe item {self.pk}'
 
 
 class Favorite(models.Model):

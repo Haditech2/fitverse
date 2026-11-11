@@ -1,22 +1,34 @@
 import json
 import logging
 import os
+from uuid import uuid4
 
 from django.core.files.base import ContentFile
 from django.core.cache import cache
 from django.core.files.storage import default_storage
 from django.shortcuts import render, get_object_or_404, redirect
-from django.http import JsonResponse
+from django.http import FileResponse, Http404, JsonResponse
 from django.conf import settings
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.models import User
 from django.db.models import Q
+from django.urls import reverse
 from django.utils import timezone
-from .models import Category, Design, UserMeasurement, SavedLook, Favorite, VirtualTryOn
+from .models import (
+    Category, Design, UserMeasurement, SavedLook, Favorite, VirtualTryOn,
+    WardrobeItem,
+)
 from .services.fashn_vton import FashnVtonError, generate_try_on
-from .services.gemini_ai import GeminiError, generate_stylist_response, generate_try_on as generate_gemini_try_on
+from .services.gemini_ai import (
+    GeminiError,
+    generate_stylist_response,
+    generate_try_on as generate_gemini_try_on,
+    recommend_wardrobe_outfits,
+    tag_wardrobe_image,
+)
 from .services.bodygram import BodygramError, estimate_measurements, normalize_photo
+from .services.wardrobe import WardrobeImageError, prepare_photo
 from .services import look360
 from .services.look360 import Look360Error
 
@@ -31,6 +43,38 @@ def get_session_key(request):
     if not request.session.session_key:
         request.session.create()
     return request.session.session_key
+
+
+def wardrobe_owner_filter(request):
+    """Match wardrobe rows for the signed-in user, or this browser session."""
+    if request.user.is_authenticated:
+        return Q(user=request.user)
+    return Q(session_key=get_session_key(request))
+
+
+def _wardrobe_item_for(request, item_id):
+    return get_object_or_404(
+        WardrobeItem.objects.filter(wardrobe_owner_filter(request)), pk=item_id
+    )
+
+
+def _wardrobe_payload(item):
+    return {
+        'id': item.id,
+        'name': item.name or 'Untitled piece',
+        'category': item.category,
+        'category_label': item.get_category_display(),
+        'colours': item.colours or [],
+        'pattern': item.pattern,
+        'formality': item.formality,
+        'seasons': item.seasons or [],
+        'style_tags': item.style_tags or [],
+        'notes': item.notes,
+        'tagged': item.tagged,
+        'wear_count': item.wear_count,
+        'thumb_url': reverse('wardrobe_item_thumb', args=[item.id]),
+        'photo_url': reverse('wardrobe_item_photo', args=[item.id]),
+    }
 
 
 def _generate_try_on(*, person_image, garment_image, category, garment_photo_type):
@@ -347,9 +391,12 @@ def wardrobe_view(request):
     user_filter = Q(user=request.user) if request.user.is_authenticated else Q(session_key=session_key)
     saved_looks = SavedLook.objects.filter(user_filter)
     favorites = Favorite.objects.filter(user_filter).select_related('design')
+    items = WardrobeItem.objects.filter(wardrobe_owner_filter(request))
     return render(request, 'wardrobe.html', {
         'saved_looks': saved_looks,
         'favorites': favorites,
+        'wardrobe_items': items,
+        'wardrobe_limit': getattr(settings, 'WARDROBE_MAX_ITEMS', 60),
     })
 
 def profile_view(request):
@@ -821,3 +868,282 @@ def api_save_look(request):
     )
 
     return JsonResponse({'status': 'saved'})
+
+
+# ---------------------------------------------------------------------------
+# Personal wardrobe
+# ---------------------------------------------------------------------------
+
+WARDROBE_ALLOWED_TYPES = {'image/jpeg', 'image/jpg', 'image/png', 'image/webp'}
+WARDROBE_MAX_BYTES = 12 * 1024 * 1024
+WARDROBE_BATCH_SIZE = 6
+
+
+@csrf_exempt
+def api_wardrobe_upload(request):
+    """Store one batch of wardrobe photos, normalising each image."""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST required'}, status=405)
+
+    uploads = request.FILES.getlist('photos')[:WARDROBE_BATCH_SIZE]
+    if not uploads:
+        return JsonResponse({'error': 'Choose at least one photo to upload.'}, status=400)
+
+    limit = getattr(settings, 'WARDROBE_MAX_ITEMS', 60)
+    existing = WardrobeItem.objects.filter(wardrobe_owner_filter(request)).count()
+    remaining = max(0, limit - max(existing, 0))
+    if not remaining:
+        return JsonResponse(
+            {'error': f'Your wardrobe is full ({limit} items). Remove a piece to add another.'},
+            status=400,
+        )
+
+    session_key = get_session_key(request)
+    user = request.user if request.user.is_authenticated else None
+    created = []
+    errors = []
+
+    for upload in uploads:
+        if len(created) >= remaining:
+            errors.append(f'Only {limit} items fit in a wardrobe right now.')
+            break
+
+        content_type = (getattr(upload, 'content_type', '') or '').lower()
+        if content_type and content_type not in WARDROBE_ALLOWED_TYPES:
+            errors.append(f'{upload.name}: use a JPEG, PNG, or WebP photo.')
+            continue
+        if upload.size > WARDROBE_MAX_BYTES:
+            errors.append(f'{upload.name}: photos must be smaller than 12 MB.')
+            continue
+
+        try:
+            prepared = prepare_photo(upload.read())
+        except WardrobeImageError as exc:
+            errors.append(f'{upload.name}: {exc}')
+            continue
+
+        item = WardrobeItem(
+            user=user,
+            session_key=session_key if not user else '',
+            name=os.path.splitext(os.path.basename(upload.name or ''))[0][:60].replace('_', ' ').strip(),
+        )
+        item.image.save(f'{uuid4().hex}.jpg', ContentFile(prepared.full), save=False)
+        item.thumb.save(f'{uuid4().hex}-thumb.jpg', ContentFile(prepared.thumb), save=False)
+        if prepared.colour:
+            item.colours = [prepared.colour]
+        item.save()
+        created.append(item)
+
+    if not created:
+        message = errors[0] if errors else 'None of those photos could be added.'
+        return JsonResponse({'error': message}, status=400)
+
+    return JsonResponse({
+        'items': [_wardrobe_payload(item) for item in created],
+        'errors': errors,
+    })
+
+
+@csrf_exempt
+def api_wardrobe_tag(request, item_id):
+    """Let the fashion AI read one item once and store its tags."""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST required'}, status=405)
+
+    item = _wardrobe_item_for(request, item_id)
+    if item.tagged:
+        return JsonResponse({'item': _wardrobe_payload(item)})
+
+    try:
+        with item.image.open('rb') as handle:
+            data = handle.read()
+    except OSError:
+        return JsonResponse({'error': 'That wardrobe photo is missing. Upload it again.'}, status=400)
+
+    try:
+        tags = tag_wardrobe_image(data, 'image/jpeg', item.name)
+    except GeminiError as exc:
+        return JsonResponse({'error': str(exc), 'fallback': True}, status=503)
+
+    item.name = tags['name'] or item.name
+    item.category = tags['category']
+    if tags['colours']:
+        item.colours = tags['colours']
+    item.pattern = tags['pattern']
+    item.formality = tags['formality']
+    item.seasons = tags['seasons']
+    item.style_tags = tags['style_tags']
+    item.tagged = True
+    item.save()
+    return JsonResponse({'item': _wardrobe_payload(item)})
+
+
+@csrf_exempt
+def api_wardrobe_update(request, item_id):
+    """Let the user correct the AI's name, category, or notes."""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST required'}, status=405)
+
+    item = _wardrobe_item_for(request, item_id)
+    try:
+        data = json.loads(request.body.decode('utf-8'))
+    except (ValueError, UnicodeDecodeError):
+        return JsonResponse({'error': 'Invalid request.'}, status=400)
+
+    if 'name' in data:
+        item.name = ' '.join(str(data.get('name') or '').split())[:120]
+    if 'category' in data:
+        valid = {choice for choice, _ in WardrobeItem.CATEGORY_CHOICES}
+        if data['category'] in valid:
+            item.category = data['category']
+    if 'formality' in data:
+        valid = {choice for choice, _ in WardrobeItem.FORMALITY_CHOICES}
+        item.formality = data['formality'] if data['formality'] in valid else ''
+    if 'notes' in data:
+        item.notes = str(data.get('notes') or '').strip()[:500]
+    item.save()
+    return JsonResponse({'item': _wardrobe_payload(item)})
+
+
+@csrf_exempt
+def api_wardrobe_delete(request, item_id):
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST required'}, status=405)
+
+    item = _wardrobe_item_for(request, item_id)
+    for field in ('image', 'thumb'):
+        file_field = getattr(item, field)
+        if not file_field:
+            continue
+        try:
+            file_field.delete(save=False)
+        except OSError as exc:
+            # Windows can hold a short-lived lock while another request streams
+            # the photo. The row still goes away; log the orphaned file instead
+            # of failing the whole delete.
+            logger.warning('Could not remove wardrobe %s for item %s: %s', field, item_id, exc)
+    item.delete()
+    return JsonResponse({'status': 'deleted'})
+
+
+@csrf_exempt
+def api_wardrobe_worn(request):
+    """Record that a chosen set of pieces was actually worn."""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST required'}, status=405)
+
+    try:
+        data = json.loads(request.body.decode('utf-8'))
+    except (ValueError, UnicodeDecodeError):
+        return JsonResponse({'error': 'Invalid request.'}, status=400)
+
+    ids = data.get('item_ids') or []
+    if not isinstance(ids, list) or not ids:
+        return JsonResponse({'error': 'Choose at least one piece.'}, status=400)
+
+    items = list(
+        WardrobeItem.objects.filter(wardrobe_owner_filter(request), id__in=ids[:12])
+    )
+    now = timezone.now()
+    for item in items:
+        item.wear_count += 1
+        item.last_worn = now
+    WardrobeItem.objects.bulk_update(items, ['wear_count', 'last_worn'])
+    return JsonResponse({'status': 'ok', 'updated': len(items)})
+
+
+@csrf_exempt
+def api_wardrobe_recommend(request):
+    """Build outfit ideas from the user's own wardrobe."""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST required'}, status=405)
+
+    try:
+        data = json.loads(request.body.decode('utf-8'))
+    except (ValueError, UnicodeDecodeError):
+        data = {}
+
+    items = list(WardrobeItem.objects.filter(wardrobe_owner_filter(request))[:60])
+    if len(items) < 2:
+        return JsonResponse(
+            {'error': 'Add at least two pieces — a top and a bottom, or a dress — first.'},
+            status=400,
+        )
+
+    measurements = UserMeasurement.objects.filter(wardrobe_owner_filter(request)).first()
+    profile = {}
+    if measurements:
+        profile = {
+            'gender': measurements.gender,
+            'height_cm': measurements.height_cm,
+            'chest_cm': measurements.chest,
+            'waist_cm': measurements.waist,
+            'hips_cm': measurements.hips,
+        }
+
+    catalog = []
+    for item in items:
+        catalog.append({
+            'id': item.id,
+            'name': item.name or 'Untitled piece',
+            'category': item.category,
+            'colours': item.colours or [],
+            'pattern': item.pattern,
+            'formality': item.formality,
+            'seasons': item.seasons or [],
+            'style_tags': item.style_tags or [],
+            'wear_count': item.wear_count,
+        })
+
+    try:
+        outfits = recommend_wardrobe_outfits(
+            items=catalog,
+            occasion=str(data.get('occasion') or '').strip()[:60],
+            weather=str(data.get('weather') or '').strip()[:80],
+            note=str(data.get('note') or '').strip()[:300],
+            profile=profile,
+        )
+    except GeminiError as exc:
+        return JsonResponse({'error': str(exc)}, status=503)
+
+    by_id = {str(item.id): item for item in items}
+    resolved = []
+    for outfit in outfits:
+        pieces = [by_id[item_id] for item_id in outfit['item_ids'] if item_id in by_id]
+        if not pieces:
+            continue
+        resolved.append({
+            'title': outfit['title'],
+            'why': outfit['why'],
+            'tip': outfit['tip'],
+            'items': [_wardrobe_payload(piece) for piece in pieces],
+        })
+
+    if not resolved:
+        return JsonResponse(
+            {'error': 'The fashion AI did not return a usable outfit. Try again.'},
+            status=503,
+        )
+    return JsonResponse({'outfits': resolved})
+
+
+def wardrobe_item_photo(request, item_id):
+    return _wardrobe_file_response(request, item_id, 'image')
+
+
+def wardrobe_item_thumb(request, item_id):
+    return _wardrobe_file_response(request, item_id, 'thumb')
+
+
+def _wardrobe_file_response(request, item_id, field):
+    item = _wardrobe_item_for(request, item_id)
+    file_field = getattr(item, field)
+    if not file_field:
+        raise Http404('Photo not found')
+    try:
+        handle = file_field.open('rb')
+    except OSError as exc:
+        raise Http404('Photo not found') from exc
+    response = FileResponse(handle, content_type='image/jpeg')
+    response['Cache-Control'] = 'private, max-age=3600'
+    return response

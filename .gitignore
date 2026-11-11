@@ -49,3 +49,6 @@ venv.bak/
 
 # User uploads and scan output (regenerated at runtime)
 media/
+
+# Private personal wardrobe photos (served only through ownership-checked views)
+private/

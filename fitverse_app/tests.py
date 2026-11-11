@@ -15,8 +15,8 @@ from django.utils import timezone
 from PIL import Image
 
 from . import views
-from .models import Category, Design, UserMeasurement
-from .services import bodygram, fashn_vton, gemini_ai, look360
+from .models import Category, Design, UserMeasurement, WardrobeItem
+from .services import bodygram, fashn_vton, gemini_ai, look360, wardrobe
 
 
 class TryOnFallbackTests(SimpleTestCase):
@@ -777,3 +777,344 @@ class FashnApiTests(SimpleTestCase):
         self.assertEqual(url, "/media/tryons/space.png")
         space.assert_called_once()
         self.assertFalse(fashn_vton.get_api_key())
+
+
+class WardrobeServiceTests(SimpleTestCase):
+    """Photo normalisation for personal wardrobe uploads."""
+
+    def _image_bytes(self, size=(320, 400), colour=(190, 40, 45), fmt="JPEG"):
+        buffer = BytesIO()
+        Image.new("RGB", size, colour).save(buffer, format=fmt)
+        return buffer.getvalue()
+
+    def test_prepare_photo_returns_full_photo_thumbnail_and_colour(self):
+        prepared = wardrobe.prepare_photo(self._image_bytes())
+
+        self.assertTrue(prepared.full.startswith(b"\xff\xd8"))
+        self.assertTrue(prepared.thumb.startswith(b"\xff\xd8"))
+        self.assertLess(len(prepared.thumb), len(prepared.full))
+        self.assertEqual(prepared.colour, "red")
+
+        with Image.open(BytesIO(prepared.full)) as full, Image.open(BytesIO(prepared.thumb)) as thumb:
+            self.assertLessEqual(max(full.size), wardrobe.MAX_EDGE)
+            self.assertLessEqual(max(thumb.size), wardrobe.THUMB_EDGE)
+
+    def test_large_photo_is_scaled_down(self):
+        prepared = wardrobe.prepare_photo(self._image_bytes(size=(2400, 3200)))
+        with Image.open(BytesIO(prepared.full)) as image:
+            self.assertEqual(max(image.size), wardrobe.MAX_EDGE)
+
+    def test_unreadable_file_is_rejected(self):
+        with self.assertRaisesMessage(wardrobe.WardrobeImageError, "not a photo"):
+            wardrobe.prepare_photo(b"definitely not an image")
+
+    def test_tiny_photo_is_rejected(self):
+        with self.assertRaisesMessage(wardrobe.WardrobeImageError, "too small"):
+            wardrobe.prepare_photo(self._image_bytes(size=(20, 20)))
+
+    def test_empty_upload_is_rejected(self):
+        with self.assertRaises(wardrobe.WardrobeImageError):
+            wardrobe.prepare_photo(b"")
+
+    def test_fenced_json_from_the_ai_is_parsed(self):
+        fenced = '```json\r\n{"outfits": [{"title": "Work"}]}\r\n```'
+        self.assertEqual(gemini_ai._parse_json(fenced), {"outfits": [{"title": "Work"}]})
+        self.assertEqual(gemini_ai._parse_json('{"name": "shirt"}'), {"name": "shirt"})
+
+
+class WardrobeApiTests(TestCase):
+    """Private closet: upload, tag, edit, wear, delete, and outfit ideas."""
+
+    def setUp(self):
+        self.tempdir = tempfile.mkdtemp(prefix="fitverse-wardrobe-")
+        self.root_override = override_settings(WARDROBE_ROOT=Path(self.tempdir))
+        self.root_override.enable()
+        self.addCleanup(shutil.rmtree, self.tempdir, True)
+        self.addCleanup(self.root_override.disable)
+        # Establish the browser session so every test owns what it uploads.
+        self.client.get("/wardrobe/")
+
+    def _photo(self, name="shirt.jpg", size=(320, 400), colour=(190, 40, 45)):
+        buffer = BytesIO()
+        Image.new("RGB", size, colour).save(buffer, format="JPEG")
+        return SimpleUploadedFile(name, buffer.getvalue(), content_type="image/jpeg")
+
+    def _upload(self, count=1):
+        files = [self._photo(name=f"piece-{index}.jpg") for index in range(count)]
+        return self.client.post("/api/wardrobe/upload/", {"photos": files})
+
+    def _item(self, **overrides):
+        data = {
+            "session_key": self.client.session.session_key or "",
+            "name": "Navy shirt",
+            "category": "top",
+            "colours": ["navy"],
+            "tagged": True,
+        }
+        data.update(overrides)
+        item = WardrobeItem(**data)
+        item.image.save("seed.jpg", ContentFile(self._photo().read()), save=False)
+        item.thumb.save("seed-thumb.jpg", ContentFile(self._photo().read()), save=False)
+        item.save()
+        return item
+
+    def _session_item(self):
+        response = self._upload(1)
+        self.assertEqual(response.status_code, 200)
+        return WardrobeItem.objects.get(pk=response.json()["items"][0]["id"])
+
+    def test_upload_normalises_and_keeps_photos_private(self):
+        response = self._upload(2)
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(len(payload["items"]), 2)
+        self.assertEqual(payload["errors"], [])
+        self.assertNotIn("image", payload["items"][0])
+
+        for item in WardrobeItem.objects.all():
+            self.assertTrue(item.image.name.endswith(".jpg"))
+            self.assertTrue(item.thumb.name.endswith(".jpg"))
+            self.assertTrue(
+                str(item.image.path).startswith(self.tempdir),
+                f"{item.image.path!r} should live under {self.tempdir!r}",
+            )
+            self.assertFalse(item.tagged)
+            self.assertEqual(item.colours, ["red"])
+
+        first = payload["items"][0]
+        self.assertEqual(first["thumb_url"], f"/wardrobe/items/{first['id']}/thumb/")
+
+    def test_upload_rejects_a_file_that_is_not_a_photo(self):
+        bad = SimpleUploadedFile("notes.jpg", b"not an image", content_type="image/jpeg")
+        response = self.client.post("/api/wardrobe/upload/", {"photos": bad})
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("not a photo", response.json()["error"])
+        self.assertFalse(WardrobeItem.objects.exists())
+
+    def test_upload_rejects_a_disallowed_file_type(self):
+        bad = SimpleUploadedFile("notes.gif", b"GIF89a", content_type="image/gif")
+        response = self.client.post("/api/wardrobe/upload/", {"photos": bad})
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("JPEG", response.json()["error"])
+
+    def test_upload_respects_the_wardrobe_limit(self):
+        with override_settings(WARDROBE_MAX_ITEMS=1):
+            first = self._upload(1)
+            second = self._upload(1)
+
+        self.assertEqual(first.status_code, 200)
+        self.assertEqual(second.status_code, 400)
+        self.assertEqual(WardrobeItem.objects.count(), 1)
+
+    def test_tagging_stores_the_ai_metadata(self):
+        item = self._session_item()
+        tags = {
+            "name": "Navy linen shirt",
+            "category": "top",
+            "colours": ["navy", "white"],
+            "pattern": "plain",
+            "formality": "smart-casual",
+            "seasons": ["hot", "mild"],
+            "style_tags": ["linen", "breathable"],
+        }
+
+        with mock.patch.object(views, "tag_wardrobe_image", return_value=tags) as tag:
+            response = self.client.post(f"/api/wardrobe/items/{item.id}/tag/")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["item"]["name"], "Navy linen shirt")
+        tag.assert_called_once()
+        item.refresh_from_db()
+        self.assertTrue(item.tagged)
+        self.assertEqual(item.category, "top")
+        self.assertEqual(item.colours, ["navy", "white"])
+        self.assertEqual(item.seasons, ["hot", "mild"])
+        self.assertEqual(item.style_tags, ["linen", "breathable"])
+
+    def test_tagging_failure_keeps_the_piece_and_flags_fallback(self):
+        item = self._session_item()
+
+        with mock.patch.object(
+            views, "tag_wardrobe_image", side_effect=gemini_ai.GeminiError("AI is resting")
+        ):
+            response = self.client.post(f"/api/wardrobe/items/{item.id}/tag/")
+
+        self.assertEqual(response.status_code, 503)
+        self.assertTrue(response.json()["fallback"])
+        item.refresh_from_db()
+        self.assertFalse(item.tagged)
+
+    def test_already_tagged_item_is_not_sent_to_the_ai_again(self):
+        item = self._item()
+
+        with mock.patch.object(views, "tag_wardrobe_image") as tag:
+            response = self.client.post(f"/api/wardrobe/items/{item.id}/tag/")
+
+        self.assertEqual(response.status_code, 200)
+        tag.assert_not_called()
+
+    def test_user_can_correct_the_ai_tags(self):
+        item = self._item(category="top")
+
+        response = self.client.post(
+            f"/api/wardrobe/items/{item.id}/update/",
+            data=json.dumps({"name": "  Navy  shirt  ", "category": "outerwear", "notes": "Wear open"}),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        item.refresh_from_db()
+        self.assertEqual(item.name, "Navy shirt")
+        self.assertEqual(item.category, "outerwear")
+        self.assertEqual(item.notes, "Wear open")
+
+    def test_invalid_category_update_is_ignored(self):
+        item = self._item(category="top")
+
+        self.client.post(
+            f"/api/wardrobe/items/{item.id}/update/",
+            data=json.dumps({"category": "spacesuit"}),
+            content_type="application/json",
+        )
+
+        item.refresh_from_db()
+        self.assertEqual(item.category, "top")
+
+    def test_photo_is_only_served_to_its_owner(self):
+        own = self._session_item()
+        foreign = WardrobeItem(session_key="someone-elses-browser", name="Not yours")
+        foreign.image.save("foreign.jpg", ContentFile(self._photo().read()), save=False)
+        foreign.save()
+
+        self.assertEqual(self.client.get(f"/wardrobe/items/{foreign.id}/photo/").status_code, 404)
+        self.assertEqual(self.client.get(f"/wardrobe/items/{foreign.id}/thumb/").status_code, 404)
+
+        response = self.client.get(f"/wardrobe/items/{own.id}/photo/")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response["Content-Type"], "image/jpeg")
+        self.assertIn("private", response["Cache-Control"])
+
+    def test_wear_history_only_touches_owned_pieces(self):
+        own = self._session_item()
+        foreign = WardrobeItem(session_key="someone-else", name="Not yours")
+        foreign.save()
+
+        response = self.client.post(
+            "/api/wardrobe/worn/",
+            data=json.dumps({"item_ids": [own.id, foreign.id]}),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["updated"], 1)
+        own.refresh_from_db()
+        foreign.refresh_from_db()
+        self.assertEqual(own.wear_count, 1)
+        self.assertIsNotNone(own.last_worn)
+        self.assertEqual(foreign.wear_count, 0)
+
+    def test_worn_requires_at_least_one_piece(self):
+        response = self.client.post(
+            "/api/wardrobe/worn/", data=json.dumps({"item_ids": []}), content_type="application/json"
+        )
+        self.assertEqual(response.status_code, 400)
+
+    def test_delete_removes_the_database_row_and_the_files(self):
+        item = self._session_item()
+        image_path = Path(item.image.path)
+        thumb_path = Path(item.thumb.path)
+        self.assertTrue(image_path.exists())
+
+        response = self.client.post(f"/api/wardrobe/items/{item.id}/delete/")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(WardrobeItem.objects.filter(pk=item.id).exists())
+        self.assertFalse(image_path.exists())
+        self.assertFalse(thumb_path.exists())
+
+    def test_other_visitors_cannot_delete_your_piece(self):
+        foreign = WardrobeItem(session_key="someone-else", name="Not yours")
+        foreign.save()
+
+        response = self.client.post(f"/api/wardrobe/items/{foreign.id}/delete/")
+
+        self.assertEqual(response.status_code, 404)
+        self.assertTrue(WardrobeItem.objects.filter(pk=foreign.id).exists())
+
+    def test_recommendations_resolve_ids_and_send_only_metadata(self):
+        shirt = self._item(name="White shirt")
+        trousers = self._item(name="Wide trousers", category="bottom", colours=["cream"])
+        captured = {}
+
+        def fake_recommend(**kwargs):
+            captured.update(kwargs)
+            return [
+                {
+                    "title": "Easy office",
+                    "item_ids": [str(shirt.id), str(trousers.id), "999999"],
+                    "why": "Clean and light.",
+                    "tip": "Add a brown belt.",
+                }
+            ]
+
+        with mock.patch.object(views, "recommend_wardrobe_outfits", side_effect=fake_recommend):
+            response = self.client.post(
+                "/api/wardrobe/recommend/",
+                data=json.dumps({"occasion": "work", "weather": "hot", "note": "keep it simple"}),
+                content_type="application/json",
+            )
+
+        self.assertEqual(response.status_code, 200)
+        outfits = response.json()["outfits"]
+        self.assertEqual(len(outfits), 1)
+        self.assertEqual([piece["id"] for piece in outfits[0]["items"]], [shirt.id, trousers.id])
+        self.assertEqual(outfits[0]["title"], "Easy office")
+        self.assertEqual(captured["occasion"], "work")
+
+        for piece in captured["items"]:
+            self.assertNotIn("image", piece)
+            self.assertNotIn("thumb_url", piece)
+            self.assertNotIn("photo_url", piece)
+
+    def test_recommendations_need_at_least_two_pieces(self):
+        self._item()
+
+        with mock.patch.object(views, "recommend_wardrobe_outfits") as recommend:
+            response = self.client.post(
+                "/api/wardrobe/recommend/",
+                data=json.dumps({}),
+                content_type="application/json",
+            )
+
+        self.assertEqual(response.status_code, 400)
+        recommend.assert_not_called()
+
+    def test_recommendation_failure_has_a_friendly_message(self):
+        self._item()
+        self._item(name="Second piece")
+
+        with mock.patch.object(
+            views, "recommend_wardrobe_outfits", side_effect=gemini_ai.GeminiError("No outfits")
+        ):
+            response = self.client.post(
+                "/api/wardrobe/recommend/",
+                data=json.dumps({}),
+                content_type="application/json",
+            )
+
+        self.assertEqual(response.status_code, 503)
+        self.assertEqual(response.json()["error"], "No outfits")
+
+    def test_wardrobe_page_renders_the_private_closet(self):
+        shirt = self._item(name="White shirt")
+
+        response = self.client.get("/wardrobe/")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "White shirt")
+        self.assertContains(response, "My clothes (1)")
+        self.assertContains(response, "photos stay private")
+        self.assertContains(response, f"/wardrobe/items/{shirt.id}/thumb/")
