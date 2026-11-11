@@ -78,7 +78,7 @@ def _wardrobe_payload(item):
 
 
 def _generate_try_on(*, person_image, garment_image, category, garment_photo_type):
-    """Render a try-on, falling back from Gemini to FASHN VTON.
+    """Render a try-on, falling back from Gemini to FASHN Try-On.
 
     Returns a ``(result_url, provider)`` tuple. Gemini is only attempted when it
     is the configured provider and an API key is present; any Gemini failure is
@@ -100,7 +100,7 @@ def _generate_try_on(*, person_image, garment_image, category, garment_photo_typ
             )
             return result_image, 'gemini'
         except GeminiError as exc:
-            logger.warning("Gemini try-on failed, falling back to FASHN VTON: %s", exc)
+            logger.warning("Gemini try-on failed, falling back to FASHN Try-On: %s", exc)
             failures.append(f"Gemini: {exc}")
         finally:
             # Reading an upload advances its stream; rewind so the fallback can read it again.
@@ -121,8 +121,8 @@ def _generate_try_on(*, person_image, garment_image, category, garment_photo_typ
         )
         return result_image, 'fashn'
     except FashnVtonError as exc:
-        logger.warning("FASHN VTON try-on failed: %s", exc)
-        failures.append(f"FASHN VTON: {exc}")
+        logger.warning("FASHN try-on failed: %s", exc)
+        failures.append(f"FASHN Try-On: {exc}")
 
     raise TryOnError("Could not generate the virtual try-on. " + " | ".join(failures))
 
@@ -497,7 +497,7 @@ def api_stylist_chat(request):
         advice = "Color harmony tip: Royal Navy pairs masterfully with Cognac brown and Silver. Wine and Burgundy look majestic when balanced with Champagne Gold or Charcoal accents. Emerald green looks striking against warm skin tones."
         matched = designs.filter(category__slug__in=['senator', 'occasion'])
     else:
-        advice = "Here is a hand-picked recommendation that balances contemporary fit with rich texture. You can preview this look on a model using FASHN VTON 1.5 in the fitting studio on the right!"
+        advice = "Here is a hand-picked recommendation that balances contemporary fit with rich texture. You can preview this look on a model using FASHN Try-On in the fitting studio on the right!"
         matched = designs.filter(is_featured=True)
 
     if not matched.exists():

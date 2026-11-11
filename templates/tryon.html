@@ -5,7 +5,7 @@
 {% block page_title %}Virtual try-on{% endblock %}
 
 {% block extra_head %}
-<meta name="description" content="Try any Fitverse design on a real photo with FASHN VTON 1.5 — upload a model photo and a garment, and get a fitted AI try-on in seconds.">
+<meta name="description" content="Try any Fitverse design on a real photo with FASHN Try-On — upload a model photo and a garment, and get a fitted AI try-on in seconds.">
 {% endblock %}
 
 {% block content %}
@@ -77,7 +77,7 @@
           <small>Upload both images, then generate to see the result.</small>
         </div>
         <div class="preview-overlay" id="dedicated-vton-loader" style="display:none">
-          <div class="brand-spinner" aria-hidden="true"><img src="{% static 'assets/brand/fitverse-mark-96.webp' %}" width="96" height="81" loading="lazy" alt=""></div><strong>Rendering your look</strong><small>FASHN VTON 1.5 is working...</small>
+          <div class="brand-spinner" aria-hidden="true"><img src="{% static 'assets/brand/fitverse-mark-96.webp' %}" width="96" height="81" loading="lazy" alt=""></div><strong>Rendering your look</strong><small>FASHN Try-On is working...</small>
         </div>
         {% with first_design=preset_designs|first %}
           <img id="user-photo-preview" loading="lazy" decoding="async"

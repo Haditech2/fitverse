@@ -224,11 +224,19 @@ def _download_output(output):
         except ValueError as exc:
             raise FashnVtonError('FASHN returned an invalid image result.') from exc
     else:
+        request = Request(output, headers={'User-Agent': 'Fitverse/1.0'})
         try:
-            with urlopen(output, timeout=90) as response:
+            with urlopen(request, timeout=90) as response:
                 blob = response.read(MAX_OUTPUT_BYTES + 1)
-        except (HTTPError, URLError, TimeoutError) as exc:
-            raise FashnVtonError('The finished try-on could not be downloaded.') from exc
+        except HTTPError as exc:
+            raise FashnVtonError(
+                f'The finished try-on could not be downloaded (HTTP {exc.code}).'
+            ) from exc
+        except (URLError, TimeoutError) as exc:
+            reason = getattr(exc, 'reason', exc)
+            raise FashnVtonError(
+                f'The finished try-on could not be downloaded: {reason}'
+            ) from exc
 
     if not blob:
         raise FashnVtonError('FASHN returned an empty image.')
@@ -269,6 +277,9 @@ def _generate_via_api(
             'mode': mode,
             'seed': int(seed),
             'output_format': 'png',
+            # Download the result inside the status response instead of relying on
+            # the short-lived CDN URL, which some networks block.
+            'return_base64': True,
         },
     }
 
@@ -315,7 +326,7 @@ def _client():
     try:
         return Client(space, hf_token=token, verbose=False)
     except Exception as exc:
-        raise FashnVtonError('Could not connect to the FASHN VTON Hugging Face Space.') from exc
+        raise FashnVtonError('Could not connect to the FASHN Hugging Face Space.') from exc
 
 
 def _input(value):
@@ -375,14 +386,14 @@ def _generate_via_space(
             api_name='/try_on',
         )
     except Exception as exc:
-        raise FashnVtonError('FASHN VTON inference failed. Please try again.') from exc
+        raise FashnVtonError('FASHN try-on failed. Please try again.') from exc
     finally:
         for temporary_path in temporary_paths:
             Path(temporary_path).unlink(missing_ok=True)
 
     result_path = result.get('path') if isinstance(result, dict) else result
     if not result_path or not Path(result_path).is_file():
-        raise FashnVtonError('FASHN VTON returned an invalid image result.')
+        raise FashnVtonError('FASHN returned an invalid image result.')
 
     output_dir = Path(settings.MEDIA_ROOT) / 'tryons'
     output_dir.mkdir(parents=True, exist_ok=True)

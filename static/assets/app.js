@@ -196,7 +196,7 @@ function generateTryOn(){
   }
   const status = $('#tryon-status');
   if(status){
-    status.innerHTML = '<strong>FASHN VTON Ready</strong><p>Photo loaded. Open Style Intelligence for real-time split testing with FASHN VTON 1.5.</p>';
+    status.innerHTML = '<strong>FASHN Try-On Ready</strong><p>Photo loaded. Open Style Intelligence for real-time split testing with FASHN Try-On.</p>';
     status.style.display = 'block';
   }
   toast('Photo ready for virtual try-on.');
@@ -911,7 +911,7 @@ function updateBudget(value){
 }
 
 /* ==========================================================================
-   STYLE INTELLIGENCE & FASHN VTON 1.5 INTEGRATION ENGINE
+   STYLE INTELLIGENCE & FASHN Try-On INTEGRATION ENGINE
    ========================================================================== */
 
 const FASHION_CATALOG = [
@@ -1073,7 +1073,7 @@ function runDedicatedTryOn(){
   else formData.append('garment_image_url', garmentUrl);
 
   if(status){
-    status.textContent = 'Rendering your look with FASHN VTON 1.5. This can take up to a minute...';
+    status.textContent = 'Rendering your look with FASHN Try-On. This can take up to a minute...';
     status.style.display = 'block';
   }
   $('#dedicated-vton-loader')?.style.setProperty('display', 'flex');
@@ -1092,7 +1092,7 @@ function runDedicatedTryOn(){
       $('#tryon-stage-label').textContent = 'Generated result';
       $('.tryon-result-copy')?.style.setProperty('display', 'none');
       if(status){
-        const engine = data.provider === 'gemini' ? 'Gemini' : 'FASHN VTON 1.5';
+        const engine = data.provider === 'gemini' ? 'Gemini' : 'FASHN Try-On';
         status.textContent = `Your generated look is ready (${engine}).`;
         status.className = 'tryon-status is-success';
         status.style.display = 'block';
@@ -1113,7 +1113,7 @@ function runDedicatedTryOn(){
     });
 }
 
-/* Transfer garment to FASHN VTON Studio */
+/* Transfer garment to FASHN Try-On Studio */
 function loadGarmentToStudio(garmentId){
   let found = FASHION_CATALOG.find(x => x.id === garmentId || String(x.id) === String(garmentId));
   if(!found){
@@ -1152,7 +1152,7 @@ function loadGarmentToStudio(garmentId){
   const resultBadge = $('#result-badge');
   if(resultBadge) resultBadge.textContent = 'Garment Loaded: ' + found.title;
 
-  toast(`Loaded "${found.title}" into FASHN VTON Studio!`);
+  toast(`Loaded "${found.title}" into FASHN Try-On Studio!`);
 
   if(window.innerWidth <= 1050){
     switchMobileTab('studio');
@@ -1177,7 +1177,7 @@ function runVTONTryOn(){
   }
 
   loader.style.display = 'flex';
-  if(loaderTitle) loaderTitle.textContent = 'FASHN VTON 1.5 Neural Rendering...';
+  if(loaderTitle) loaderTitle.textContent = 'FASHN Try-On Neural Rendering...';
   if(loaderStep) loaderStep.textContent = 'Step 1/3: Analyzing pose & person segmentation...';
 
   setTimeout(() => {
@@ -1208,7 +1208,7 @@ function runVTONTryOn(){
       return data;
     })
     .then(data => {
-      const engine = data.provider === 'gemini' ? 'Gemini' : 'FASHN VTON 1.5';
+      const engine = data.provider === 'gemini' ? 'Gemini' : 'FASHN Try-On';
       if(outputImg) outputImg.src = data.result_image;
       if(badge) badge.textContent = `✨ ${engine} Render: ${activeGarment.title}`;
       if(status){
@@ -1263,7 +1263,7 @@ function generateStylistFallback(userInput){
     advice = "Color harmony tip: Royal Navy pairs masterfully with Cognac brown and Silver. Wine and Burgundy look majestic when balanced with Champagne Gold or Charcoal accents. Emerald green looks striking against warm skin tones.";
     matchedLooks = [FASHION_CATALOG[0], FASHION_CATALOG[2]];
   } else {
-    advice = "Here is a hand-picked recommendation that balances contemporary fit with rich texture. You can preview this look on a model using FASHN VTON 1.5 in the fitting studio on the right!";
+    advice = "Here is a hand-picked recommendation that balances contemporary fit with rich texture. You can preview this look on a model using FASHN Try-On in the fitting studio on the right!";
     matchedLooks = [FASHION_CATALOG[0], FASHION_CATALOG[1]];
   }
 

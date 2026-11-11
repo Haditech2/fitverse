@@ -8,15 +8,15 @@
 <div class="section-head">
   <div>
     <div class="eyebrow">AI Fashion Stylist & Virtual Fitting Studio</div>
-    <h2>Conversational Styling with FASHN VTON 1.5</h2>
+    <h2>Conversational Styling with FASHN Try-On</h2>
   </div>
-  <p>Chat with your AI stylist to explore Senator wear, Ankara prints, and modern tailoring. Transfer any look straight into the FASHN VTON 1.5 virtual try-on engine with one click.</p>
+  <p>Chat with your AI stylist to explore Senator wear, Ankara prints, and modern tailoring. Transfer any look straight into the FASHN Try-On virtual try-on engine with one click.</p>
 </div>
 
 <!-- Mobile Tab Switcher -->
 <div class="mobile-studio-switch">
   <button type="button" class="active" id="btn-mobile-chat">💬 Stylist Chat</button>
-  <button type="button" id="btn-mobile-studio">⚡ FASHN VTON Studio</button>
+  <button type="button" id="btn-mobile-studio">⚡ FASHN Try-On Studio</button>
 </div>
 
 <!-- Split Studio Container -->
@@ -70,7 +70,7 @@
       <div class="message">
         <div class="message-author">Fitverse Stylist</div>
         <p>Welcome! I'm your fashion stylist. Whether you're dressing for a traditional Nigerian wedding, Sunday service, a boardroom presentation, or an evening gala, I will help you curate the perfect look.</p>
-        <p style="margin-top:8px;">Every look I recommend can be sent directly to the <strong>FASHN VTON 1.5 Studio</strong> on the right so you can see how it looks on a model or your own photo.</p>
+        <p style="margin-top:8px;">Every look I recommend can be sent directly to the <strong>FASHN Try-On Studio</strong> on the right so you can see how it looks on a model or your own photo.</p>
       </div>
     </div>
 
@@ -90,14 +90,14 @@
     </form>
   </section>
 
-  <!-- RIGHT COLUMN: FASHN VTON 1.5 Studio -->
+  <!-- RIGHT COLUMN: FASHN Try-On Studio -->
   <aside class="panel studio-tryon" id="studio-tryon-panel">
     <div class="panel-head studio-vton-head">
       <div class="vton-title-group">
         <div class="vton-logo-badge">
           <span class="vton-icon">◉</span>
           <div>
-            <h3>FASHN VTON 1.5 Studio</h3>
+            <h3>FASHN Try-On Studio</h3>
             <span class="vton-sub">Multimodal Diffusion (MMDiT) Virtual Try-On</span>
           </div>
         </div>
@@ -192,7 +192,7 @@
       <div class="tryon-preview-stage" id="tryon-preview-stage">
         <div class="preview-overlay" id="vton-loader" style="display:none">
           <div class="brand-spinner" aria-hidden="true"><img src="{% static 'assets/brand/fitverse-mark-96.webp' %}" width="96" height="81" loading="lazy" alt=""></div>
-          <p><strong id="vton-loader-title">FASHN VTON 1.5 Neural Rendering...</strong></p>
+          <p><strong id="vton-loader-title">FASHN Try-On Neural Rendering...</strong></p>
           <span class="sub-loader" id="vton-loader-step">Pixel-space diffusion in progress</span>
         </div>
         <img id="vton-output-image" src="/static/assets/looks/set-mudcloth-720.webp" width="720" height="900" alt="Virtual try-on result">

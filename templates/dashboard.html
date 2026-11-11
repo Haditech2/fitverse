@@ -13,7 +13,7 @@
   <div class="dashboard-hero-copy">
     <div class="eyebrow" style="color:#EEC95C">Your style space</div>
     <h2>Welcome{% if request.user.is_authenticated %}, {{ request.user.first_name|default:request.user.username }}{% endif %}.</h2>
-    <p>Something new is waiting to be discovered. Explore traditional Senator styles, Ankara prints, or test a virtual try-on with FASHN VTON 1.5.</p>
+    <p>Something new is waiting to be discovered. Explore traditional Senator styles, Ankara prints, or test a virtual try-on with FASHN Try-On.</p>
     <a class="button light" href="{% url 'style_intelligence' %}">Open AI Stylist Studio ↗</a>
   </div>
   <img

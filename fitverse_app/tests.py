@@ -729,6 +729,7 @@ class FashnApiTests(SimpleTestCase):
         self.assertTrue(inputs["garment_image"].startswith("data:image/jpeg;base64,"))
         self.assertEqual(inputs["category"], "tops")
         self.assertEqual(inputs["output_format"], "png")
+        self.assertTrue(inputs["return_base64"])
         self.assertEqual(api.call_args_list[1].args[0], "/status/pred_1")
 
         download.assert_called_once_with("https://cdn.fashn.ai/pred_1/output_0.png")
@@ -768,6 +769,11 @@ class FashnApiTests(SimpleTestCase):
         )
         self.assertIn("credits are used up", str(fashn_vton._http_error(error)))
 
+    def test_base64_output_is_decoded(self):
+        data_uri = "data:image/png;base64," + base64.b64encode(b"png-bytes").decode("ascii")
+        self.assertEqual(fashn_vton._download_output(data_uri), b"png-bytes")
+
+    @override_settings(FASHN_API_KEY="")
     def test_without_a_key_the_free_space_is_used(self):
         with mock.patch.object(
             fashn_vton, "_generate_via_space", return_value="/media/tryons/space.png"
