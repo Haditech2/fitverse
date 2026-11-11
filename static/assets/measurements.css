@@ -1,0 +1,256 @@
+/* ================================================================
+   MY MEASUREMENTS — previous layout, current green palette.
+   Loaded only on the measurements page. The experience layer keeps the
+   app shell, nav and colours; this file restores the compact, squared
+   studio surfaces this page used before the experience overhaul.
+   ================================================================ */
+
+body.page-measurements .app-top h1 {
+  font-size: 35px;
+  letter-spacing: -.035em;
+}
+
+/* ---- Page heading -------------------------------------------------- */
+
+body.page-measurements .section-head {
+  gap: 24px;
+  margin-bottom: 28px;
+}
+
+body.page-measurements .section-head h2 {
+  margin: 8px 0 0;
+  font-size: clamp(2rem, 3vw, 3.2rem);
+}
+
+body.page-measurements .section-head p {
+  max-width: 430px;
+  margin: 0;
+  color: var(--muted);
+  font-size: 15px;
+  line-height: 1.55;
+}
+
+/* ---- Panels -------------------------------------------------------- */
+
+body.page-measurements .panel {
+  border-radius: 0;
+  background: var(--white);
+  padding: 22px;
+  box-shadow: none;
+}
+
+body.page-measurements .panel p {
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--muted);
+}
+
+body.page-measurements .panel-head {
+  margin-bottom: 17px;
+}
+
+body.page-measurements .panel-head h2,
+body.page-measurements .panel-head h3 {
+  letter-spacing: normal;
+}
+
+body.page-measurements .panel > button,
+body.page-measurements #bodygram-submit {
+  min-height: 0;
+  border-radius: 4px;
+  padding: 12px 17px;
+  font-size: 15px;
+}
+
+body.page-measurements .tag {
+  border: 0;
+  border-radius: 0;
+  background: var(--brand-wash);
+  color: var(--brand-green-deep);
+  font-size: 11px;
+  padding: 4px 8px;
+}
+
+/* ---- Fields -------------------------------------------------------- */
+
+body.page-measurements .field {
+  gap: 7px;
+  margin-bottom: 17px;
+}
+
+body.page-measurements .field label {
+  color: #405247;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+body.page-measurements .field input,
+body.page-measurements .field select {
+  min-height: 0;
+  border: 1px solid var(--line-strong);
+  border-radius: 3px;
+  background: var(--white);
+  padding: 12px 13px;
+}
+
+/* ---- Unit switch --------------------------------------------------- */
+
+body.page-measurements .segmented {
+  gap: 4px;
+  width: max-content;
+  margin-bottom: 20px;
+  border-radius: 0;
+  background: #e9e7da;
+  padding: 4px;
+}
+
+body.page-measurements .segmented button {
+  min-height: 0;
+  border-radius: 0;
+  padding: 8px 13px;
+}
+
+/* ---- Guide + editor layout ----------------------------------------- */
+
+body.page-measurements .measurement-layout {
+  gap: 24px;
+}
+
+body.page-measurements .measurement-grid {
+  grid-template-columns: 1fr 1fr;
+  gap: 0 14px;
+}
+
+body.page-measurements .body-illustration {
+  min-height: 390px;
+  border-radius: 0;
+  background: var(--brand-wash);
+  color: var(--ink);
+  padding: 25px;
+}
+
+body.page-measurements .body-illustration p {
+  color: var(--muted);
+}
+
+body.page-measurements .body-illustration .silhouette {
+  font-size: 125px;
+  line-height: 1.2;
+  color: #84ab85;
+}
+
+body.page-measurements .notice {
+  margin: 14px 0;
+  border: 0;
+  border-left: 3px solid var(--brand-gold);
+  border-radius: 0;
+  background: var(--brand-wash);
+  color: #365641;
+  padding: 13px 15px;
+  font-size: 12px;
+}
+
+body.page-measurements .choice-grid {
+  gap: 10px;
+}
+
+body.page-measurements .choice {
+  min-height: 0;
+  border-radius: 0;
+  padding: 17px;
+}
+
+body.page-measurements .choice.active {
+  padding: 16px;
+  border: 2px solid var(--plum);
+  background: var(--brand-wash);
+}
+
+body.page-measurements .choice:hover {
+  background: var(--brand-wash);
+  color: var(--ink);
+}
+
+/* ---- Bodygram scan ------------------------------------------------- */
+
+body.page-measurements .bodygram-photos {
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  margin: 14px 0 18px;
+}
+
+body.page-measurements .bodygram-photo {
+  min-height: 0;
+  gap: 3px;
+  padding: 16px;
+  border: 1.5px dashed #b8cdbe;
+  border-radius: 10px;
+  background: #f5f8f2;
+}
+
+body.page-measurements .bodygram-photo:hover {
+  border-color: var(--plum);
+  background: var(--white);
+  transform: none;
+}
+
+body.page-measurements .bodygram-card {
+  border-radius: 12px;
+  background: #f8f8f1;
+}
+
+body.page-measurements .bodygram-all,
+body.page-measurements .bodygram-saved-photos {
+  border-radius: 10px;
+  background: #f8f8f1;
+}
+
+body.page-measurements .bodygram-avatar,
+body.page-measurements .bodygram-posture {
+  border-radius: 12px;
+  background: #f8f8f1;
+}
+
+body.page-measurements .bodygram-avatar-stage {
+  border-radius: 8px;
+}
+
+body.page-measurements .bodygram-posture {
+  padding: 16px;
+}
+
+body.page-measurements .bodygram-posture-figure {
+  border-radius: 12px;
+}
+
+body.page-measurements .bodygram-avatar-reset {
+  padding: 5px 9px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: rgba(255, 254, 248, .92);
+  font-size: 11px;
+}
+
+body.page-measurements .bodygram-row-badge {
+  padding: 1px 4px;
+  border-radius: 4px;
+  font-size: 9px;
+}
+
+/* ---- Responsive ---------------------------------------------------- */
+
+@media (max-width: 760px) {
+  body.page-measurements .app-top h1 {
+    font-size: 30px;
+  }
+
+  body.page-measurements .section-head {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  body.page-measurements .measurement-layout,
+  body.page-measurements .measurement-grid {
+    grid-template-columns: 1fr;
+  }
+}
