@@ -19,7 +19,7 @@ from .models import (
     Category, Design, UserMeasurement, SavedLook, Favorite, VirtualTryOn,
     WardrobeItem,
 )
-from .services.fashn_vton import FashnVtonError, generate_try_on
+from .services.fashn_vton import FashnVtonError, generate_try_on, generate_fabric_design
 from .services.gemini_ai import (
     GeminiError,
     generate_stylist_response,
@@ -129,6 +129,10 @@ def _generate_try_on(*, person_image, garment_image, category, garment_photo_typ
 # -------------------------------------------------------------
 # PAGE VIEWS
 # -------------------------------------------------------------
+
+def studio_view(request):
+    return redirect(settings.STUDIO_URL)
+
 
 def home(request):
     featured_designs = Design.objects.filter(is_featured=True)[:4]
@@ -497,7 +501,7 @@ def api_stylist_chat(request):
         advice = "Color harmony tip: Royal Navy pairs masterfully with Cognac brown and Silver. Wine and Burgundy look majestic when balanced with Champagne Gold or Charcoal accents. Emerald green looks striking against warm skin tones."
         matched = designs.filter(category__slug__in=['senator', 'occasion'])
     else:
-        advice = "Here is a hand-picked recommendation that balances contemporary fit with rich texture. You can preview this look on a model using FASHN Try-On in the fitting studio on the right!"
+        advice = "Start with the silhouette you want, then choose a fabric with the right drape and weight. Add a fabric photo and a design brief here when you are ready to see a visual concept."
         matched = designs.filter(is_featured=True)
 
     if not matched.exists():
@@ -538,6 +542,29 @@ def api_stylist_chat(request):
         'advice': advice,
         'looks': looks,
     })
+
+
+@csrf_exempt
+def api_stylist_design(request):
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST required'}, status=405)
+    fabric = request.FILES.get('fabric')
+    prompt = request.POST.get('message', '').strip()[:1200]
+    if not fabric or not prompt:
+        return JsonResponse({'error': 'Add a fabric image and describe the design you want.'}, status=400)
+    if fabric.size > 12 * 1024 * 1024:
+        return JsonResponse({'error': 'Choose a fabric image smaller than 12 MB.'}, status=400)
+    try:
+        prepared = prepare_photo(fabric.read())
+        image_url = generate_fabric_design(
+            fabric_bytes=prepared.full,
+            prompt=prompt,
+            occasion=request.POST.get('occasion', 'any')[:40],
+            style=request.POST.get('style', 'any')[:40],
+        )
+    except (WardrobeImageError, FashnVtonError) as exc:
+        return JsonResponse({'error': str(exc)}, status=503 if isinstance(exc, FashnVtonError) else 400)
+    return JsonResponse({'image': image_url, 'message': 'Here is a design based on your fabric and brief.'})
 
 
 @csrf_exempt

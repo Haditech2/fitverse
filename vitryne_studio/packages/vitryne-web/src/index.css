@@ -1,0 +1,193 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+/* The look of the "Vitryne editor concept" canvas: a light, warm grey ground, near-black ink,
+   one orange-red accent, blue for focus and selection; Bricolage Grotesque for headings, DM
+   Sans for everything else (both OFL, bundled: nothing is fetched from other sites). */
+@import "tailwindcss";
+@import "tw-animate-css";
+
+#fitverse-loader { position: fixed; inset: 0; z-index: 2000; display: grid; place-items: center; background: #f5f3ec; opacity: 1; visibility: visible; transition: opacity 420ms ease, visibility 420ms step-end; }
+#fitverse-loader.is-ready { opacity: 0; visibility: hidden; pointer-events: none; }
+.fitverse-loader-inner { display: grid; width: min(320px, calc(100vw - 48px)); justify-items: center; color: #044625; text-align: center; }
+.fitverse-loader-mark { position: relative; display: grid; width: 138px; height: 138px; place-items: center; border-radius: 50%; background: #fffef8; box-shadow: 0 18px 54px rgba(4,70,37,.13); margin-bottom: 24px; }
+.fitverse-loader-mark::before { position: absolute; inset: -8px; border: 3px solid rgba(8,106,46,.14); border-top-color: #c5a354; border-right-color: #086a2e; border-radius: 50%; content: ""; animation: fitverse-orbit 1.35s linear infinite; }
+.fitverse-loader-mark span { width: 112px; height: 96px; background: url('/images/fitverse-loader-mark.webp') center / contain no-repeat; animation: fitverse-breathe 1.8s ease-in-out infinite alternate; }
+.fitverse-loader-wordmark { width: 248px; height: 62px; background: url('/images/fitverse-wordmark.webp') center / contain no-repeat; margin-bottom: 14px; }
+.fitverse-loader-inner > span { color: #5b625c; font-size: 13px; font-weight: 600; }
+.fitverse-loader-inner > i { position: relative; width: 220px; height: 3px; overflow: hidden; border-radius: 999px; background: rgba(4,70,37,.12); margin-top: 18px; }
+.fitverse-loader-inner > i::after { position: absolute; inset: 0; border-radius: inherit; background: linear-gradient(90deg,#044625,#e1c775,#086a2e); content: ""; transform: translateX(-100%); animation: fitverse-progress 1.25s ease-in-out infinite; }
+@keyframes fitverse-orbit { to { transform: rotate(360deg); } }
+@keyframes fitverse-breathe { from { transform: scale(.96); } to { transform: scale(1.02); } }
+@keyframes fitverse-progress { 0% { transform: translateX(-100%); } 55%, 100% { transform: translateX(100%); } }
+@media (prefers-reduced-motion: reduce) { .fitverse-loader-mark::before, .fitverse-loader-mark span, .fitverse-loader-inner > i::after { animation: none; } }
+
+/* Light is the concept's look; dark is the same palette turned down. `src/lib/theme.ts` sets the
+   `.dark` class on <html> (the person's choice, or the system setting), and `dark:` styles in the
+   shadcn components follow it. */
+@custom-variant dark (&:is(.dark *));
+
+:root {
+  --radius: 0.625rem;
+  /* Surfaces */
+  --background: #f4f5f2;
+  --foreground: #14181f;
+  --card: #ffffff;
+  --card-foreground: #14181f;
+  --popover: #ffffff;
+  --popover-foreground: #14181f;
+  /* Actions: ink buttons on the light ground */
+  --primary: #14181f;
+  --primary-foreground: #ffffff;
+  --secondary: #e8ece4;
+  --secondary-foreground: #14181f;
+  --muted: #e8ece4;
+  --muted-foreground: #5b625c;
+  --accent: #e8ece4;
+  --accent-foreground: #14181f;
+  --destructive: #b42d14;
+  --border: #e1e4de;
+  --input: #cfd4cb;
+  --ring: #3a63f0;
+  /* The concept's own tokens */
+  --body-text: #4a514b;
+  --line: #8e968a;
+  --brand: #e4572e;
+  --select: #3a63f0;
+  --live: #1f9d6b;
+  --canvas-3d: #ecefe9;
+  --canvas-flat: #fafbf8;
+  --on-ink-muted: #c9cec6;
+  /* Tokens for what was once hard-coded hex */
+  --border-strong: #d5d9d1;
+  --hover: #f4f5f2;
+  --chip: #e1e4de;
+  --faint: #b9c0b4;
+  --danger: #8a2410;
+  --danger-soft: #fce9e9;
+  --danger-soft-foreground: #a12c2c;
+  --piece-fill: #ffffff;
+  --grid: #7f8b78;
+  color-scheme: light;
+}
+
+.dark {
+  --background: #14171c;
+  --foreground: #eceee9;
+  --card: #1c2027;
+  --card-foreground: #eceee9;
+  --popover: #1c2027;
+  --popover-foreground: #eceee9;
+  --primary: #eceee9;
+  --primary-foreground: #14181f;
+  --secondary: #272c34;
+  --secondary-foreground: #eceee9;
+  --muted: #272c34;
+  --muted-foreground: #9ba29c;
+  --accent: #2b3139;
+  --accent-foreground: #eceee9;
+  --destructive: #e0644c;
+  --border: #2a2f37;
+  --input: #3a414b;
+  --ring: #7b98ff;
+  --body-text: #b9bfb8;
+  --line: #6f776c;
+  --brand: #f0683f;
+  --select: #7b98ff;
+  --live: #34c58a;
+  --canvas-3d: #1a1e24;
+  --canvas-flat: #171a1f;
+  --on-ink-muted: #4a514b;
+  --border-strong: #3a414b;
+  --hover: #22272e;
+  --chip: #313740;
+  --faint: #4a514b;
+  --danger: #f08a76;
+  --danger-soft: #3a1d1d;
+  --danger-soft-foreground: #f2a0a0;
+  --piece-fill: #2a2f37;
+  --grid: #8e9a86;
+  color-scheme: dark;
+}
+
+@theme inline {
+  --font-sans: "DM Sans", system-ui, sans-serif;
+  --font-display: "Bricolage Grotesque", "DM Sans", sans-serif;
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 6px);
+  --radius-2xl: calc(var(--radius) + 10px);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-body-text: var(--body-text);
+  --color-line: var(--line);
+  --color-brand: var(--brand);
+  --color-select: var(--select);
+  --color-live: var(--live);
+  --color-canvas-3d: var(--canvas-3d);
+  --color-canvas-flat: var(--canvas-flat);
+  --color-on-ink-muted: var(--on-ink-muted);
+  --color-border-strong: var(--border-strong);
+  --color-hover: var(--hover);
+  --color-chip: var(--chip);
+  --color-faint: var(--faint);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-danger-soft-foreground: var(--danger-soft-foreground);
+  --color-piece-fill: var(--piece-fill);
+  --color-grid: var(--grid);
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  html,
+  body,
+  #root {
+    @apply h-full;
+  }
+  body {
+    @apply bg-background text-foreground font-sans overflow-hidden antialiased;
+  }
+  :focus-visible {
+    outline: 2px solid var(--select);
+    outline-offset: 2px;
+  }
+  button {
+    cursor: pointer;
+  }
+}
+
+@keyframes live-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+
+@utility live-dot {
+  animation: live-pulse 1.8s ease-in-out infinite;
+}
+
+@utility flat-grid {
+  background-color: var(--canvas-flat);
+}

@@ -1,0 +1,16 @@
+{
+  "name": "drape-patterns",
+  "private": true,
+  "license": "AGPL-3.0-or-later",
+  "type": "module",
+  "description": "Drafts the spike-2 test garments with FreeSewing (MIT) and writes DXF-AAMA",
+  "dependencies": {
+    "@freesewing/config": "4.10.2",
+    "@freesewing/core": "4.10.2",
+    "@freesewing/hugo": "4.10.2",
+    "@freesewing/plugin-transform": "4.10.2",
+    "@freesewing/teagan": "4.10.2",
+    "@freesewing/titan": "4.10.2"
+  },
+  "packageManager": "pnpm@10.11.1"
+}

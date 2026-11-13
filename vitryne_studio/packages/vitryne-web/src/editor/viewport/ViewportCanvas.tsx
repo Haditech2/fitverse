@@ -1,0 +1,116 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+import { useEffect, useRef } from "react";
+import { useAltHeld } from "../hooks/useAltHeld";
+import { useModHeld } from "../hooks/useModHeld";
+import { sceneStyle } from "./sceneStyle";
+import { useSkin } from "@/lib/skin";
+import { useResolvedTheme } from "@/lib/theme";
+import type { PointerTool } from "@/worker/protocol";
+import { type EngineSession } from "@/worker/session";
+
+const MAX_DPR = 2;
+
+function canvasSize(el: HTMLElement) {
+  const dpr = Math.min(window.devicePixelRatio || 1, MAX_DPR);
+  return {
+    width: Math.max(1, Math.round(el.clientWidth * dpr)),
+    height: Math.max(1, Math.round(el.clientHeight * dpr)),
+  };
+}
+
+export function ViewportCanvas({
+  session,
+  tool,
+}: {
+  session: EngineSession;
+  tool: PointerTool;
+}) {
+  const ref = useRef<HTMLCanvasElement>(null);
+  const theme = useResolvedTheme();
+  const skin = useSkin();
+  const turning = useModHeld();
+  const sliding = useAltHeld();
+
+  // Sent before the canvas attaches, and again when the theme or the skin tone changes (the worker repaints).
+  useEffect(() => {
+    session.setStyle(sceneStyle(theme, skin));
+  }, [session, theme, skin]);
+
+  useEffect(() => {
+    const canvas = ref.current;
+    if (!canvas) return;
+    session.attach(canvas, canvasSize(canvas));
+    const ro = new ResizeObserver(() => {
+      const s = canvasSize(canvas);
+      session.resize(s.width, s.height);
+    });
+    ro.observe(canvas);
+    // A wheel notch zooms, and so does a two-finger drag up or down on a trackpad and a pinch
+    // (which browsers send as a wheel with ctrl held). Trackpads send small, often fractional
+    // deltas, sideways ones too (ignored); a wheel notch is a big, whole, vertical one.
+    const wheel = (e: WheelEvent) => {
+      e.preventDefault();
+      if (e.ctrlKey) {
+        session.wheel(-e.deltaY / 15);
+        return;
+      }
+      const trackpad =
+        e.deltaMode === 0 &&
+        (e.deltaX !== 0 ||
+          Math.abs(e.deltaY) < 50 ||
+          !Number.isInteger(e.deltaY));
+      session.wheel(-e.deltaY / (trackpad ? 60 : 100));
+    };
+    canvas.addEventListener("wheel", wheel, { passive: false });
+    return () => {
+      ro.disconnect();
+      canvas.removeEventListener("wheel", wheel);
+      session.detach();
+    };
+  }, [session]);
+
+  const send = (
+    phase: "down" | "move" | "up",
+    e: React.PointerEvent<HTMLCanvasElement>,
+  ) => {
+    const r = e.currentTarget.getBoundingClientRect();
+    const x = ((e.clientX - r.left) / r.width) * 2 - 1;
+    const y = 1 - ((e.clientY - r.top) / r.height) * 2;
+    // Cmd (Ctrl) turns the view and Option (Alt) slides it, whatever the tool.
+    const camera =
+      e.metaKey || e.ctrlKey ? "orbit" : e.altKey ? "pan" : undefined;
+    session.pointer(
+      phase,
+      x,
+      y,
+      e.clientX,
+      e.clientY,
+      // A right click picks the piece under it, whatever the tool: the menu acts on it.
+      phase === "down" ? (e.button === 2 ? "select" : tool) : undefined,
+      phase === "down" ? camera : undefined,
+    );
+  };
+
+  return (
+    <canvas
+      ref={ref}
+      data-viewport
+      aria-label="3D view of the garment on the mannequin"
+      className={`block h-full w-full touch-none outline-none ${turning ? "cursor-grab active:cursor-grabbing" : sliding ? "cursor-move" : tool === "pinch" ? "cursor-crosshair" : "cursor-default"}`}
+      tabIndex={-1}
+      onPointerDown={(e) => {
+        try {
+          e.currentTarget.setPointerCapture(e.pointerId);
+        } catch {
+          // Not a pointer the browser tracks: the drag ends at the canvas edge.
+        }
+        send("down", e);
+      }}
+      onPointerMove={(e) => {
+        if (e.buttons) send("move", e);
+      }}
+      onPointerUp={(e) => send("up", e)}
+      onPointerCancel={(e) => send("up", e)}
+    />
+  );
+}

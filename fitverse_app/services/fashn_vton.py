@@ -253,6 +253,47 @@ def _save_output(blob):
     return f'{settings.MEDIA_URL}tryons/{output_path.name}'
 
 
+def generate_fabric_design(*, fabric_bytes, prompt, occasion, style):
+    """Create one garment concept from a fabric photo with FASHN Agent Images."""
+    key = get_api_key()
+    if not key:
+        raise FashnVtonError('FASHN design generation needs FASHN_API_KEY in .env.')
+    if not fabric_bytes:
+        raise FashnVtonError('Add a fabric photo first.')
+    fabric_uri = 'data:image/jpeg;base64,' + base64.b64encode(fabric_bytes).decode('ascii')
+    request_prompt = (
+        'Generate exactly one realistic full-length fashion design image on a neutral studio mannequin. '
+        'The first image is a fabric swatch, not a finished garment. Use its actual colors, print scale, '
+        'and texture to design a new wearable outfit. Show the whole garment clearly, with construction '
+        'and silhouette visible. Do not add text, logos, a collage, or extra people. '
+        f'Design brief: {prompt}. Occasion: {occasion}. Style: {style}.'
+    )
+    result = _api_request(
+        '/agent/images', key=key, timeout=180,
+        payload={
+            'prompt': request_prompt,
+            'images': [fabric_uri],
+            'aspect_ratio': '3:4',
+            'resolution': '1k',
+            'generation_mode': 'fast',
+            'return_base64': True,
+        },
+    )
+    if not isinstance(result, dict) or result.get('status') != 'completed':
+        error = result.get('error') if isinstance(result, dict) else None
+        detail = error.get('message') if isinstance(error, dict) else None
+        raise FashnVtonError(detail or 'FASHN could not generate the design. Try a more specific brief.')
+    for prediction in result.get('predictions') or []:
+        if prediction.get('status') == 'completed' and prediction.get('results'):
+            blob = _download_output(str(prediction['results'][-1]))
+            output_dir = Path(settings.MEDIA_ROOT) / 'designs'
+            output_dir.mkdir(parents=True, exist_ok=True)
+            output_path = output_dir / f'{uuid4().hex}.png'
+            output_path.write_bytes(blob)
+            return f'{settings.MEDIA_URL}designs/{output_path.name}'
+    raise FashnVtonError('FASHN finished without a design image. Try a more specific brief.')
+
+
 def _generate_via_api(
     *,
     person_image,

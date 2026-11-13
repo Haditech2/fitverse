@@ -1263,7 +1263,7 @@ function generateStylistFallback(userInput){
     advice = "Color harmony tip: Royal Navy pairs masterfully with Cognac brown and Silver. Wine and Burgundy look majestic when balanced with Champagne Gold or Charcoal accents. Emerald green looks striking against warm skin tones.";
     matchedLooks = [FASHION_CATALOG[0], FASHION_CATALOG[2]];
   } else {
-    advice = "Here is a hand-picked recommendation that balances contemporary fit with rich texture. You can preview this look on a model using FASHN Try-On in the fitting studio on the right!";
+    advice = "Start with the silhouette you want, then choose a fabric with the right drape and weight. Add a fabric photo and a design brief here when you are ready to see a visual concept.";
     matchedLooks = [FASHION_CATALOG[0], FASHION_CATALOG[1]];
   }
 
@@ -1271,11 +1271,46 @@ function generateStylistFallback(userInput){
 }
 
 /* Send Stylist Message Flow with Django API */
+let stylistFabricFile = null;
+
+function setStylistFabric(file){
+  if(!file) return;
+  if(!file.type.startsWith('image/')) return toast('Paste or choose an image of your fabric.');
+  if(file.size > 12 * 1024 * 1024) return toast('Choose a fabric image smaller than 12 MB.');
+  stylistFabricFile = file;
+  const preview = $('#fabric-preview');
+  if(preview){
+    if(preview.dataset.objectUrl) URL.revokeObjectURL(preview.dataset.objectUrl);
+    preview.dataset.objectUrl = URL.createObjectURL(file);
+    preview.src = preview.dataset.objectUrl;
+  }
+  const name = $('#fabric-name');
+  if(name) name.textContent = file.name || 'Pasted fabric image';
+  const attachment = $('#fabric-attachment');
+  if(attachment) attachment.hidden = false;
+  const send = $('#stylist-send-btn');
+  if(send) send.textContent = 'Generate design ↗';
+}
+
+function clearStylistFabric(){
+  stylistFabricFile = null;
+  const preview = $('#fabric-preview');
+  if(preview?.dataset.objectUrl) URL.revokeObjectURL(preview.dataset.objectUrl);
+  if(preview) preview.removeAttribute('src');
+  const upload = $('#fabric-upload');
+  if(upload) upload.value = '';
+  const attachment = $('#fabric-attachment');
+  if(attachment) attachment.hidden = true;
+  const send = $('#stylist-send-btn');
+  if(send) send.textContent = 'Send ↗';
+}
+
 function sendStylistMessage(){
   const input = $('#stylist-input');
   if(!input || !input.value.trim()) return;
 
   const userQuery = input.value.trim();
+  const fabric = stylistFabricFile;
   const list = $('#chat-messages');
 
   // Append user bubble
@@ -1284,6 +1319,15 @@ function sendStylistMessage(){
   const up = document.createElement('p');
   up.textContent = userQuery;
   userMsg.appendChild(up);
+  if(fabric){
+    const fabricImage = document.createElement('img');
+    fabricImage.className = 'chat-fabric-image';
+    fabricImage.alt = 'Fabric reference';
+    fabricImage.src = URL.createObjectURL(fabric);
+    fabricImage.onload = () => URL.revokeObjectURL(fabricImage.src);
+    userMsg.appendChild(fabricImage);
+    clearStylistFabric();
+  }
   list.appendChild(userMsg);
   input.value = '';
   list.scrollTop = list.scrollHeight;
@@ -1300,6 +1344,53 @@ function sendStylistMessage(){
   const styleBrief = $('#brief-style')?.value || 'any';
   const budget = Number($('#brief-budget')?.value || 50000);
 
+  if(fabric){
+    const body = new FormData();
+    body.append('fabric', fabric);
+    body.append('message', userQuery);
+    body.append('occasion', occasion);
+    body.append('style', styleBrief);
+    fetch('/api/stylist/design/', { method: 'POST', body })
+      .then(async r => {
+        const data = await r.json();
+        if(!r.ok) throw new Error(data.error || 'Could not generate the design.');
+        return data;
+      })
+      .then(data => {
+        $('#chat-typing')?.remove();
+        const reply = document.createElement('div');
+        reply.className = 'message design-reply';
+        const author = document.createElement('div');
+        author.className = 'message-author';
+        author.textContent = 'Fitverse Stylist';
+        const caption = document.createElement('p');
+        caption.textContent = data.message;
+        const image = document.createElement('img');
+        image.src = data.image;
+        image.alt = `Generated design: ${userQuery}`;
+        image.className = 'generated-design-image';
+        const openImage = document.createElement('a');
+        openImage.href = data.image;
+        openImage.target = '_blank';
+        openImage.rel = 'noopener';
+        openImage.className = 'design-open-link';
+        openImage.textContent = 'Open full image ↗';
+        reply.append(author, caption, image, openImage);
+        list.appendChild(reply);
+        list.scrollTop = list.scrollHeight;
+      })
+      .catch(error => {
+        $('#chat-typing')?.remove();
+        const reply = document.createElement('div');
+        reply.className = 'message';
+        reply.setAttribute('role', 'alert');
+        reply.textContent = error.message || 'Could not generate the design. Please try again.';
+        list.appendChild(reply);
+        list.scrollTop = list.scrollHeight;
+      });
+    return;
+  }
+
   // Call Django API
   fetch('/api/stylist/chat/', {
     method: 'POST',
@@ -1311,23 +1402,19 @@ function sendStylistMessage(){
       budget: budget
     })
   })
-  .then(r => r.json())
-  .then(data => {
-    renderStylistResponse(data.advice, data.looks);
+  .then(async r => {
+    const data = await r.json();
+    if(!r.ok) throw new Error(data.error || 'The stylist is unavailable right now.');
+    return data;
   })
-  .catch(() => {
-    // Local fallback if API unavailable
-    const fallback = generateStylistFallback(userQuery);
-    renderStylistResponse(fallback.advice, fallback.looks);
-  });
+  .then(data => renderStylistResponse(data.advice))
+  .catch(error => renderStylistResponse(error.message || 'The stylist is unavailable right now.'));
 }
 
-function renderStylistResponse(advice, looks){
+function renderStylistResponse(advice){
   const list = $('#chat-messages');
   const typingEl = $('#chat-typing');
   if(typingEl) typingEl.remove();
-
-  window.__serverLooks = looks;
 
   const stylistMsg = document.createElement('div');
   stylistMsg.className = 'message';
@@ -1340,36 +1427,6 @@ function renderStylistResponse(advice, looks){
   const ap = document.createElement('p');
   ap.textContent = advice;
   stylistMsg.appendChild(ap);
-
-  looks.forEach(look => {
-    const card = document.createElement('div');
-    card.className = 'look-card';
-    card.innerHTML = `
-      <img class="look-thumb" src="${look.image}" alt="${look.title}">
-      <div class="look-info">
-        <div>
-          <div class="look-title-row">
-            <h4 class="look-title">${look.title}</h4>
-          </div>
-          <p class="look-desc">${look.description}</p>
-          <div class="look-meta">
-            <span class="price">${look.priceLabel || '₦' + Number(look.price).toLocaleString('en-NG')}</span>
-            <span class="tag">${look.fabric || 'Native Textile'}</span>
-            <span class="tag">${look.silhouette || 'Tailored'}</span>
-          </div>
-        </div>
-        <div class="look-actions">
-          <button type="button" class="btn-tryon-card" onclick="loadGarmentToStudio('${look.id}')">
-            ⚡ Try On in Studio
-          </button>
-          <button type="button" class="btn-save-look-card" onclick="toggleFavorite(this, '${look.id}')" title="Save to wardrobe">
-            ♡
-          </button>
-        </div>
-      </div>
-    `;
-    stylistMsg.appendChild(card);
-  });
 
   list.appendChild(stylistMsg);
   list.scrollTop = list.scrollHeight;
@@ -1397,13 +1454,23 @@ function switchMobileTab(target){
 
 /* Setup Studio Event Handlers */
 function setupStudioEvents(){
+  $('#fabric-upload')?.addEventListener('change', event => setStylistFabric(event.target.files?.[0]));
+  $('#fabric-remove')?.addEventListener('click', clearStylistFabric);
+  $('#stylist-input')?.addEventListener('paste', event => {
+    const image = [...(event.clipboardData?.items || [])].find(item => item.type.startsWith('image/'));
+    if(image){
+      event.preventDefault();
+      setStylistFabric(image.getAsFile());
+    }
+  });
   $('#btn-clear-chat')?.addEventListener('click', () => {
+    clearStylistFabric();
     const list = $('#chat-messages');
     if(list){
       list.innerHTML = `
         <div class="message">
           <div class="message-author">Fitverse Stylist</div>
-          <p>Conversation reset. What look or occasion shall we explore today?</p>
+          <p>New chat. Add your fabric and describe the outfit you want to create.</p>
         </div>
       `;
     }
@@ -1854,7 +1921,7 @@ document.addEventListener('click', e => {
   const promptTrigger = e.target.closest('[data-prompt]');
   if(promptTrigger && $('#stylist-input')){
     $('#stylist-input').value = promptTrigger.dataset.prompt;
-    sendStylistMessage();
+    $('#stylist-input').focus();
   }
 
   const suggestionTrigger = e.target.closest('[data-suggestion]');

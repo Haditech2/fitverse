@@ -19,6 +19,48 @@ from .models import Category, Design, UserMeasurement, WardrobeItem
 from .services import bodygram, fashn_vton, gemini_ai, look360, wardrobe
 
 
+class FabricDesignChatTests(SimpleTestCase):
+    @override_settings(FASHN_API_KEY='test-key')
+    def test_fashn_agent_receives_fabric_reference_and_design_brief(self):
+        directory = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, directory, ignore_errors=True)
+        result = {'status': 'completed', 'predictions': [
+            {'status': 'completed', 'results': ['data:image/png;base64,cG5n']}
+        ]}
+        with override_settings(MEDIA_ROOT=directory), mock.patch.object(
+            fashn_vton, '_api_request', return_value=result
+        ) as request, mock.patch.object(fashn_vton, '_download_output', return_value=b'png'):
+            image = fashn_vton.generate_fabric_design(
+                fabric_bytes=b'jpeg', prompt='Long sleeve gown', occasion='wedding', style='ankara'
+            )
+        self.assertTrue(image.startswith('/media/designs/'))
+        self.assertEqual(request.call_args.args[0], '/agent/images')
+        payload = request.call_args.kwargs['payload']
+        self.assertIn('Long sleeve gown', payload['prompt'])
+        self.assertEqual(payload['images'], ['data:image/jpeg;base64,anBlZw=='])
+        self.assertEqual(payload['generation_mode'], 'fast')
+
+    def test_uploaded_fabric_and_brief_reach_design_generator(self):
+        photo = BytesIO()
+        Image.new('RGB', (80, 80), '#9a2444').save(photo, format='PNG')
+        upload = SimpleUploadedFile('fabric.png', photo.getvalue(), content_type='image/png')
+        with mock.patch.object(views, 'generate_fabric_design', return_value='/media/designs/new.png') as generate:
+            response = self.client.post('/api/stylist/design/', {
+                'fabric': upload,
+                'message': 'Long sleeve wedding gown',
+                'occasion': 'wedding',
+                'style': 'ankara',
+            })
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()['image'], '/media/designs/new.png')
+        self.assertEqual(generate.call_args.kwargs['prompt'], 'Long sleeve wedding gown')
+        self.assertTrue(generate.call_args.kwargs['fabric_bytes'].startswith(b'\xff\xd8'))
+
+    def test_design_requires_fabric(self):
+        response = self.client.post('/api/stylist/design/', {'message': 'A gown'})
+        self.assertEqual(response.status_code, 400)
+
+
 class TryOnFallbackTests(SimpleTestCase):
     """Provider selection and fallback behaviour for _generate_try_on."""
 

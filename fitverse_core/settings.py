@@ -148,4 +148,7 @@ LOGIN_REDIRECT_URL = 'dashboard'
 LOGOUT_REDIRECT_URL = 'home'
 LOGIN_URL = 'login'
 
+# The garment design editor runs as a separate WebGPU application during development.
+STUDIO_URL = os.getenv('STUDIO_URL', 'http://127.0.0.1:5173/')
+
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'

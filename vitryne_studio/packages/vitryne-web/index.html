@@ -1,0 +1,52 @@
+<!doctype html>
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" type="image/webp" href="/images/fitverse-mark.webp" />
+    <link rel="apple-touch-icon" href="/images/fitverse-mark.webp" />
+    <!-- Sets the theme before the first paint, so a dark choice doesn't flash light. Same rule
+         as src/lib/theme.ts. -->
+    <script>
+      try {
+        var t = localStorage.getItem("vitryne.theme");
+        if (
+          t === "dark" ||
+          (t !== "light" && matchMedia("(prefers-color-scheme: dark)").matches)
+        )
+          document.documentElement.classList.add("dark");
+      } catch (e) {}
+    </script>
+    <title>Fitverse Studio — Garment Design</title>
+    <meta
+      name="description"
+      content="Draw, sew, drape and export garments in a browser tab. Free and open source."
+    />
+    <!-- Link previews. Crawlers need an absolute image URL: the hosted copy serves it for every
+         install, and there is no og:url so self-hosted copies keep their own address. -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Fitverse Studio" />
+    <meta
+      property="og:title"
+      content="Fitverse Studio — Garment Design"
+    />
+    <meta
+      property="og:description"
+      content="Draw, sew, drape and export garments in a browser tab. Free and open source."
+    />
+    <meta name="twitter:card" content="summary_large_image" />
+  </head>
+  <body>
+    <div id="fitverse-loader" role="status" aria-label="Loading Fitverse Studio">
+      <div class="fitverse-loader-inner">
+        <div class="fitverse-loader-mark"><span></span></div>
+        <div class="fitverse-loader-wordmark"></div>
+        <span>Preparing your Fitverse Studio</span>
+        <i aria-hidden="true"></i>
+      </div>
+    </div>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

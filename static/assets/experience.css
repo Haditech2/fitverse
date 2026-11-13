@@ -3115,3 +3115,25 @@ body:has(.brand-loader:not(.is-ready)) {
     display: none;
   }
 }
+.design-chat-page{width:min(920px,100%);margin:0 auto 48px}
+.design-chat-intro{padding:8px 2px 24px}
+.design-chat-intro h2{margin:8px 0 10px;font-size:clamp(30px,4vw,48px)}
+.design-chat-intro p{max-width:640px;margin:0;color:var(--muted);font-size:15px;line-height:1.6}
+.design-chat-page .studio-chat{min-height:650px;height:min(760px,calc(100vh - 210px));max-height:none;padding:0;overflow:hidden;display:flex;flex-direction:column;border-radius:20px}
+.design-chat-head{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:18px 22px;border-bottom:1px solid var(--line)}
+.design-chat-head h3{margin:0;font-family:'DM Sans',sans-serif;font-size:16px;font-weight:700}
+.design-chat-page .chat-messages{flex:1;max-height:none;min-height:0;padding:24px;overflow-y:auto}
+.design-chat-page .message{max-width:min(85%,600px)}
+.design-chat-page .design-reply{max-width:min(100%,600px)}
+.design-chat-bottom{border-top:1px solid var(--line);padding:14px 20px 16px;background:var(--white)}
+.design-chat-bottom .suggestions{margin:0 0 12px;flex-wrap:nowrap;overflow-x:auto;padding-bottom:2px}
+.design-chat-bottom .suggestion{white-space:nowrap;flex:none}
+.design-chat-page .chat-form{display:flex;align-items:end;gap:10px;flex-wrap:wrap;padding:0;border:0}
+.design-chat-page .fabric-attachment{flex-basis:100%}
+.design-chat-page .fabric-add{min-height:48px;border-radius:10px}
+.design-chat-page #stylist-input{flex:1;min-width:180px;min-height:48px;max-height:150px;resize:vertical;padding:12px 14px;border:1px solid var(--line);border-radius:10px;background:var(--paper);color:var(--ink)}
+.design-chat-page #stylist-input:focus{outline:2px solid var(--plum);outline-offset:1px}
+.design-chat-page #stylist-send-btn{min-height:48px;min-width:100px;border-radius:10px}
+.design-chat-page .fabric-hint{margin:8px 0 0}
+.design-open-link{display:inline-block;margin-top:10px;color:var(--plum);font-weight:700;font-size:13px;text-decoration:underline;text-underline-offset:3px}
+@media(max-width:760px){.design-chat-intro{padding-top:0}.design-chat-page .studio-chat{height:calc(100dvh - 260px);min-height:520px;border-radius:14px}.design-chat-page .chat-messages{padding:16px}.design-chat-page .message{max-width:94%}.design-chat-bottom{padding:12px}.design-chat-page #stylist-input{order:1;flex-basis:100%}.design-chat-page .fabric-add{order:2}.design-chat-page #stylist-send-btn{order:3;flex:1}}

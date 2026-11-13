@@ -1,0 +1,15 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+name: vitryne
+
+services:
+  web:
+    image: ${VITRYNE_IMAGE:-ghcr.io/h4kken/vitryne-web}:${VITRYNE_VERSION:-latest}
+    restart: unless-stopped
+    ports:
+      - "${HTTP_PORT:-8000}:80"
+    environment:
+      SUPABASE_URL: ${SUPABASE_URL:?SUPABASE_URL required}
+      SUPABASE_PUBLISHABLE_KEY: ${SUPABASE_PUBLISHABLE_KEY:?SUPABASE_PUBLISHABLE_KEY required}
+      SUPABASE_DB_URL: ${SUPABASE_DB_URL:-}
+      PRIVACY_POLICY_URL: ${PRIVACY_POLICY_URL:-}
+      TERMS_URL: ${TERMS_URL:-}

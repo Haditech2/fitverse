@@ -7,9 +7,9 @@
   <meta name="theme-color" content="#044625">
   <link rel="icon" href="{% static 'assets/brand/fitverse-mark.webp' %}" type="image/webp">
   <title>{% block title %}Fitverse AI — Intelligent Fashion & Virtual Try-On{% endblock %}</title>
-  <link rel="stylesheet" href="{% static 'assets/styles.css' %}?v=10">
+  <link rel="stylesheet" href="{% static 'assets/styles.css' %}?v=11">
   <link rel="stylesheet" href="{% static 'assets/vendor/scrolljs.css' %}?v=2.0.1">
-  <link rel="stylesheet" href="{% static 'assets/experience.css' %}?v=13">
+  <link rel="stylesheet" href="{% static 'assets/experience.css' %}?v=14">
   <noscript><style>img[data-smart-image]{display:none!important}</style></noscript>
   {% block extra_head %}{% endblock %}
 </head>
@@ -26,6 +26,7 @@
           <a class="{% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}" href="{% url 'dashboard' %}"><span>⌂</span>Home</a>
           <a class="{% if request.resolver_match.url_name == 'designs' or request.resolver_match.url_name == 'design_detail' %}active{% endif %}" href="{% url 'designs' %}"><span>▦</span>Discover Designs</a>
           <a class="{% if request.resolver_match.url_name == 'tryon' %}active{% endif %}" href="{% url 'tryon' %}"><span>◉</span>Virtual Try-On</a>
+          <a class="{% if request.resolver_match.url_name == 'studio' %}active{% endif %}" href="{% url 'studio' %}"><span>✂</span>Garment Studio</a>
           <a class="{% if request.resolver_match.url_name == 'measurements' %}active{% endif %}" href="{% url 'measurements' %}"><span>↔</span>My Measurements</a>
           <a class="{% if request.resolver_match.url_name == 'style_intelligence' %}active{% endif %}" href="{% url 'style_intelligence' %}"><span>✳</span>Style Intelligence</a>
           <a class="{% if request.resolver_match.url_name == 'wardrobe' %}active{% endif %}" href="{% url 'wardrobe' %}"><span>♡</span>My Wardrobe</a>
@@ -63,6 +64,7 @@
     <a class="{% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}" href="{% url 'dashboard' %}"><span>⌂</span><span>Home</span></a>
     <a class="{% if request.resolver_match.url_name == 'designs' or request.resolver_match.url_name == 'design_detail' %}active{% endif %}" href="{% url 'designs' %}"><span>▦</span><span>Designs</span></a>
     <a class="{% if request.resolver_match.url_name == 'tryon' %}active{% endif %}" href="{% url 'tryon' %}"><span>◉</span><span>Try-On</span></a>
+    <a class="{% if request.resolver_match.url_name == 'studio' %}active{% endif %}" href="{% url 'studio' %}"><span>✂</span><span>Studio</span></a>
     <a class="{% if request.resolver_match.url_name == 'style_intelligence' %}active{% endif %}" href="{% url 'style_intelligence' %}"><span>✳</span><span>Stylist</span></a>
     <a class="{% if request.resolver_match.url_name == 'wardrobe' %}active{% endif %}" href="{% url 'wardrobe' %}"><span>♡</span><span>Wardrobe</span></a>
     <a class="{% if request.resolver_match.url_name == 'profile' %}active{% endif %}" href="{% url 'profile' %}"><span>○</span><span>Profile</span></a>
@@ -72,7 +74,7 @@
   <div id="toast" class="toast"></div>
   <script src="{% static 'assets/vendor/liquid-glass.umd.js' %}?v=1.2.0"></script>
   <script src="{% static 'assets/vendor/scroll.umd.js' %}?v=2.0.1"></script>
-  <script src="{% static 'assets/app.js' %}?v=21"></script>
+  <script src="{% static 'assets/app.js' %}?v=23"></script>
   <script src="{% static 'assets/glass.js' %}?v=4"></script>
   <script src="{% static 'assets/scroll.js' %}?v=5"></script>
   {% block extra_scripts %}{% endblock %}

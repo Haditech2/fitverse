@@ -1,0 +1,10 @@
+/packages/vitryne-engine/target
+/node_modules
+*.ppm
+.DS_Store
+/.gstack
+/bench-out
+__pycache__/
+/wasm-bindgen-0.2.129-x86_64-pc-windows-msvc/
+/wasm-bindgen-0.2.129-x86_64-pc-windows-msvc.tar.gz
+/wasm-bindgen-0.2.129-x86_64-pc-windows-msvc.tar.gz.sha256sum

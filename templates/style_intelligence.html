@@ -1,241 +1,65 @@
 {% extends "base.html" %}
 {% load static %}
 
-{% block title %}Style Intelligence & Virtual Fitting | Fitverse AI{% endblock %}
+{% block title %}Design with Fitverse AI{% endblock %}
 {% block page_title %}Style Intelligence{% endblock %}
 
 {% block content %}
-<div class="section-head">
-  <div>
-    <div class="eyebrow">AI Fashion Stylist & Virtual Fitting Studio</div>
-    <h2>Conversational Styling with FASHN Try-On</h2>
+<div class="design-chat-page">
+  <div class="design-chat-intro">
+    <span class="eyebrow">Your fashion design assistant</span>
+    <h2>Bring your fabric. Describe your look.</h2>
+    <p>Attach or paste a fabric photo, then tell us the outfit you want. Fitverse will create a design from your material.</p>
   </div>
-  <p>Chat with your AI stylist to explore Senator wear, Ankara prints, and modern tailoring. Transfer any look straight into the FASHN Try-On virtual try-on engine with one click.</p>
-</div>
 
-<!-- Mobile Tab Switcher -->
-<div class="mobile-studio-switch">
-  <button type="button" class="active" id="btn-mobile-chat">💬 Stylist Chat</button>
-  <button type="button" id="btn-mobile-studio">⚡ FASHN Try-On Studio</button>
-</div>
-
-<!-- Split Studio Container -->
-<div class="split-studio">
-
-  <!-- LEFT COLUMN: Conversational Stylist Chatbot -->
-  <section class="panel chat-window studio-chat" id="studio-chat-panel">
-    <div class="panel-head">
+  <section class="panel studio-chat" id="studio-chat-panel" aria-label="Design chat">
+    <div class="design-chat-head">
       <div class="stylist-badge">
         <span class="status-dot"></span>
         <div>
-          <h3>Fitverse AI Stylist</h3>
-          <span class="muted-badge">Django Backend · African & Global Fashion Advisor</span>
+          <h3>Fitverse Stylist</h3>
+          <span class="muted-badge">Fabric to design</span>
         </div>
       </div>
-      <button type="button" class="tool-btn" id="btn-clear-chat" title="Clear chat history">⟲ Reset</button>
+      <button type="button" class="tool-btn" id="btn-clear-chat">New chat</button>
     </div>
 
-    <!-- Interactive Style Brief Bar -->
-    <div class="brief-strip">
-      <div class="brief-item">
-        <label for="brief-occasion">Occasion</label>
-        <select id="brief-occasion">
-          <option value="any">Any Occasion</option>
-          <option value="wedding">Wedding / Owambe</option>
-          <option value="work">Corporate / Work</option>
-          <option value="casual">Casual Outing</option>
-          <option value="religious">Sunday / Religious</option>
-          <option value="gala">Dinner / Gala</option>
-        </select>
-      </div>
-      <div class="brief-item">
-        <label for="brief-style">Style</label>
-        <select id="brief-style">
-          <option value="any">All Directions</option>
-          <option value="senator">Senator Wear</option>
-          <option value="ankara">Ankara Print</option>
-          <option value="formal">Modern Tailored</option>
-          <option value="agbada">Agbada Grandeur</option>
-        </select>
-      </div>
-      <div class="brief-item">
-        <label for="brief-budget">Budget</label>
-        <input type="range" id="brief-budget" min="15000" max="250000" step="5000" value="50000">
-        <span class="brief-budget-val" id="brief-budget-display">₦50,000</span>
-      </div>
-    </div>
-
-    <!-- Message History -->
-    <div class="chat-messages" id="chat-messages">
+    <div class="chat-messages" id="chat-messages" aria-live="polite">
       <div class="message">
         <div class="message-author">Fitverse Stylist</div>
-        <p>Welcome! I'm your fashion stylist. Whether you're dressing for a traditional Nigerian wedding, Sunday service, a boardroom presentation, or an evening gala, I will help you curate the perfect look.</p>
-        <p style="margin-top:8px;">Every look I recommend can be sent directly to the <strong>FASHN Try-On Studio</strong> on the right so you can see how it looks on a model or your own photo.</p>
+        <p>What would you like to make? Add a photo of your fabric and describe the silhouette, length, sleeves, fit, or occasion.</p>
       </div>
     </div>
 
-    <!-- Quick Suggestion Prompts -->
-    <div class="suggestions">
-      <button type="button" class="suggestion" data-prompt="Suggest a sharp navy Senator outfit for a wedding guest">✨ Wedding Senator Look</button>
-      <button type="button" class="suggestion" data-prompt="Recommend an elegant Ankara style for Sunday celebration">✨ Ankara Celebration Gown</button>
-      <button type="button" class="suggestion" data-prompt="What should I wear for a corporate executive meeting?">✨ Corporate Executive Fit</button>
-      <button type="button" class="suggestion" data-prompt="Recommend stylish outfits under ₦45,000">✨ Budget Picks (₦45k)</button>
-      <button type="button" class="suggestion" data-prompt="Help me match colors with wine or emerald fabrics">✨ Color Theory Guide</button>
+    <div class="design-chat-bottom">
+      <div class="suggestions" aria-label="Design ideas">
+        <button type="button" class="suggestion" data-prompt="Design a flowing Ankara wedding gown with long sleeves and a fitted waist">Ankara wedding gown</button>
+        <button type="button" class="suggestion" data-prompt="Design a modern Senator set with a clean neckline and tapered trousers">Modern Senator set</button>
+        <button type="button" class="suggestion" data-prompt="Design a relaxed two-piece outfit with wide-leg trousers">Relaxed two-piece</button>
+      </div>
+      <form class="chat-form" id="stylist-form">
+        <div class="fabric-attachment" id="fabric-attachment" hidden>
+          <img id="fabric-preview" alt="Fabric to use in your design">
+          <span id="fabric-name"></span>
+          <button type="button" id="fabric-remove" aria-label="Remove fabric image">×</button>
+        </div>
+        <label class="fabric-add" for="fabric-upload">+ Add fabric</label>
+        <input type="file" id="fabric-upload" accept="image/*" hidden>
+        <textarea id="stylist-input" rows="2" placeholder="Describe the design you want…" aria-label="Describe your design"></textarea>
+        <button type="submit" id="stylist-send-btn">Send ↗</button>
+      </form>
+      <p class="fabric-hint">Paste an image with Ctrl+V, or add a fabric photo. Text alone asks the stylist for advice.</p>
     </div>
-
-    <!-- Chat Form -->
-    <form class="chat-form" id="stylist-form">
-      <input id="stylist-input" placeholder="Ask your stylist anything (e.g. 'Show me modern Senator styles for an owambe')..." aria-label="Message your stylist" autocomplete="off">
-      <button type="submit" id="stylist-send-btn">Send ↗</button>
-    </form>
   </section>
-
-  <!-- RIGHT COLUMN: FASHN Try-On Studio -->
-  <aside class="panel studio-tryon" id="studio-tryon-panel">
-    <div class="panel-head studio-vton-head">
-      <div class="vton-title-group">
-        <div class="vton-logo-badge">
-          <span class="vton-icon">◉</span>
-          <div>
-            <h3>FASHN Try-On Studio</h3>
-            <span class="vton-sub">Multimodal Diffusion (MMDiT) Virtual Try-On</span>
-          </div>
-        </div>
-      </div>
-      <div class="vton-tabs">
-        <button type="button" class="vton-tab-btn active" id="tab-canvas-btn">Fitting Canvas</button>
-        <button type="button" class="vton-tab-btn" id="tab-live-btn">Live Space ↗</button>
-      </div>
-    </div>
-
-    <!-- Fitting Canvas View -->
-    <div id="vton-canvas-view" class="vton-view">
-      <!-- Active Garment Card -->
-      <div class="active-garment-card" id="active-garment-box">
-        <div class="ag-header">
-          <span class="pill-label">Active Garment from Stylist</span>
-          <span class="garment-category-pill" id="ag-category">{{ initial_garment.category.name|default:"Senator Wear" }}</span>
-        </div>
-        <div class="ag-body">
-          <div class="ag-img-wrap">
-            <img id="ag-image" src="{{ initial_garment.image_url|default:'/static/assets/looks/senator-white-401.webp' }}" alt="Active garment">
-          </div>
-          <div class="ag-details">
-            <h4 id="ag-title">{{ initial_garment.title|default:"Classic Senator Set" }}</h4>
-            <p id="ag-desc">{{ initial_garment.description|default:"Structured navy tailoring with clean collar line" }}</p>
-            <div class="ag-meta">
-              <span class="price" id="ag-price">{{ initial_garment.price_label|default:"₦45,000" }}</span>
-              <span class="tag" id="ag-tag">{{ initial_garment.fabric|default:"Italian Wool" }}</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Model / User Photo Selector -->
-      <div class="vton-model-section">
-        <div class="vton-section-title">
-          <span>1. Select Model or Upload Photo</span>
-          <label class="custom-upload-btn">
-            <span>+ Upload Photo</span>
-            <input type="file" id="vton-user-upload" accept="image/*" style="display:none">
-          </label>
-        </div>
-        <div class="model-presets">
-          <button type="button" class="model-thumb selected" data-model="male-1" data-img="https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=600&q=80">
-            <img src="https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=300&q=80" alt="Model 1">
-            <span>Male Model</span>
-          </button>
-          <button type="button" class="model-thumb" data-model="female-1" data-img="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=600&q=80">
-            <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80" alt="Model 2">
-            <span>Female Model</span>
-          </button>
-          <button type="button" class="model-thumb" data-model="male-2" data-img="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=600&q=80">
-            <img src="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=300&q=80" alt="Model 3">
-            <span>Athletic Fit</span>
-          </button>
-          <button type="button" class="model-thumb" data-model="female-2" data-img="https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=600&q=80">
-            <img src="https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=300&q=80" alt="Model 4">
-            <span>Curvy Fit</span>
-          </button>
-        </div>
-      </div>
-
-      <!-- Parameters -->
-      <div class="vton-controls-row">
-        <div class="control-group">
-          <label for="vton-category-select">Garment Category</label>
-          <select id="vton-category-select">
-            <option value="one-pieces" selected>One-Pieces & Sets (Senator / Gown)</option>
-            <option value="tops">Tops & Shirts</option>
-            <option value="bottoms">Trousers & Skirts</option>
-          </select>
-        </div>
-        <div class="control-group">
-          <label for="vton-mode-select">Fitting Silhouette</label>
-          <select id="vton-mode-select">
-            <option value="tailored">Slim / Tailored</option>
-            <option value="balanced" selected>Balanced Regular</option>
-            <option value="relaxed">Relaxed / Agbada</option>
-          </select>
-        </div>
-      </div>
-
-      <!-- Run Button -->
-      <div class="vton-actions">
-        <button type="button" class="vton-run-btn" id="btn-run-tryon">
-          ⚡ Generate Virtual Try-On
-        </button>
-      </div>
-      <div id="vton-status" class="tryon-status" style="display:none" role="status" aria-live="polite"></div>
-
-      <!-- Canvas Stage -->
-      <div class="tryon-preview-stage" id="tryon-preview-stage">
-        <div class="preview-overlay" id="vton-loader" style="display:none">
-          <div class="brand-spinner" aria-hidden="true"><img src="{% static 'assets/brand/fitverse-mark-96.webp' %}" width="96" height="81" loading="lazy" alt=""></div>
-          <p><strong id="vton-loader-title">FASHN Try-On Neural Rendering...</strong></p>
-          <span class="sub-loader" id="vton-loader-step">Pixel-space diffusion in progress</span>
-        </div>
-        <img id="vton-output-image" src="/static/assets/looks/set-mudcloth-720.webp" width="720" height="900" alt="Virtual try-on result">
-        <div class="result-badge" id="result-badge">Model Ready</div>
-      </div>
-
-      <!-- Actions bar -->
-      <div class="result-toolbar">
-        <button type="button" class="button small secondary" id="btn-save-look">♡ Save Look</button>
-        <button type="button" class="button small secondary" id="btn-copy-garment-url">Copy Garment Link</button>
-        <a href="https://huggingface.co/spaces/fashn-ai/fashn-vton-1.5" target="_blank" rel="noopener" class="button small light">Open FASHN Space ↗</a>
-      </div>
-    </div>
-
-    <!-- Live Hugging Face Space View -->
-    <div id="vton-live-view" class="vton-view" style="display:none">
-      <div class="live-space-info">
-        <span>Connected to <strong>fashn-ai/fashn-vton-1.5</strong> via Hugging Face</span>
-        <a href="https://huggingface.co/spaces/fashn-ai/fashn-vton-1.5" target="_blank" rel="noopener">Open Space in new tab ↗</a>
-      </div>
-      <div class="iframe-container">
-        <iframe
-          id="fashn-hf-iframe"
-          src="https://fashn-ai-fashn-vton-1-5.hf.space"
-          frameborder="0"
-          width="100%"
-          height="680px"
-          allow="accelerometer; camera; encrypted-media; geolocation; gyroscope; microphone"
-          sandbox="allow-forms allow-modals allow-popups allow-popups-to-escape-sandbox allow-same-origin allow-scripts allow-downloads"
-        ></iframe>
-      </div>
-    </div>
-  </aside>
 </div>
 
-<!-- Fashion Inspiration Row -->
-<section class="section" style="padding-top:48px;">
+<section class="section style-recommendations" aria-labelledby="style-recommendations-title">
   <div class="section-head">
     <div>
       <div class="eyebrow">Explore inspiration</div>
-      <h2>Curated Lookbooks</h2>
+      <h2 id="style-recommendations-title">Curated Looks</h2>
     </div>
-    <p>Browse signature silhouettes and tap any collection to find more styles.</p>
+    <p>Explore more styles while you plan your own design.</p>
   </div>
   <div class="collection-grid">
     <a class="collection-card" href="{% url 'designs' %}?category=senator">
@@ -250,13 +74,13 @@
     </a>
     <a class="collection-card" href="{% url 'designs' %}?category=occasion">
       <img src="{% static 'assets/looks/glamour-corset-401.webp' %}" width="401" height="712" loading="lazy" alt="Occasion luxury">
-      <h3>Owambe & Gala</h3>
+      <h3>Owambe &amp; Gala</h3>
       <p>Grand evening statements</p>
     </a>
     <a class="collection-card" href="{% url 'designs' %}?category=formal">
       <img src="{% static 'assets/looks/set-pleat-720.webp' %}" width="720" height="960" loading="lazy" alt="Contemporary formal">
       <h3>Executive Tailoring</h3>
-      <p>Boardroom precision & comfort</p>
+      <p>Boardroom precision and comfort</p>
     </a>
   </div>
 </section>

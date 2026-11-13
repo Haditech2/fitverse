@@ -1,0 +1,18 @@
+{
+  "icon": "Code",
+  "root": true,
+  "pages": [
+    "---Introduction---",
+    "index",
+    "requirements",
+    "---Infos & Guides---",
+    "guide",
+    "imports_exports",
+    "self-hosting",
+    "---Developers---",
+    "developers",
+    "---More---",
+    "legal",
+    "changelog"
+  ]
+}

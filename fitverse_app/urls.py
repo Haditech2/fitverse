@@ -10,6 +10,7 @@ urlpatterns = [
     path('tryon/', views.tryon_view, name='tryon'),
     path('measurements/', views.measurements_view, name='measurements'),
     path('style-intelligence/', views.style_intelligence_view, name='style_intelligence'),
+    path('studio/', views.studio_view, name='studio'),
     path('wardrobe/', views.wardrobe_view, name='wardrobe'),
     path('profile/', views.profile_view, name='profile'),
     path('sources/', views.image_sources_view, name='image_sources'),
@@ -22,6 +23,7 @@ urlpatterns = [
 
     # API Endpoints
     path('api/stylist/chat/', views.api_stylist_chat, name='api_stylist_chat'),
+    path('api/stylist/design/', views.api_stylist_design, name='api_stylist_design'),
     path('api/vton/tryon/', views.api_vton_tryon, name='api_vton_tryon'),
     path('api/measurements/save/', views.api_save_measurements, name='api_save_measurements'),
     path('api/measurements/bodygram/', views.api_bodygram_measurements, name='api_bodygram_measurements'),
